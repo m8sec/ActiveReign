@@ -1,0 +1,15 @@
+certifi==2019.6.16
+chardet==3.0.4
+dnspython==1.16.0
+et-xmlfile==1.0.1
+idna==2.8
+ipparser==0.3.5
+jdcal==1.4.1
+lxml==4.4.1
+openpyxl==2.6.3
+pyasn1==0.4.6
+pysmb==1.1.27
+python-docx==0.8.10
+requests==2.22.0
+terminaltables==3.1.0
+urllib3==1.25.3
