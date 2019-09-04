@@ -25,7 +25,7 @@ from ar3.logger import setup_logger,setup_file_logger,print_args
 
 
 def banner():
-    VERSION = "v0.0.1"
+    VERSION = "v0.0.2"
     BANNER = """  
 
                                    _____                  
