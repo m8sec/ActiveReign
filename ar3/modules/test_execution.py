@@ -33,17 +33,17 @@ class TestExecution():
         self.exec_method = {
             WMIEXEC  : {'Name'      : 'WMIEXEC',
                         'Fileless'  : '\033[1;31mFAILED\033[0m',
-                        'Filed'     : '\033[1;31mFAILED\033[0m'
+                        'Remote'     : '\033[1;31mFAILED\033[0m'
                         },
 
             SMBEXEC  : {'Name'      : 'SMBEXEC',
                         'Fileless'  : '\033[1;31mFAILED\033[0m',
-                        'Filed'     : '\033[1;31mFAILED\033[0m'
+                        'Remote'     : '\033[1;31mFAILED\033[0m'
                         }
                     }
         # Defile filed/fileless via share
         self.exec_type = {
-            'Filed'     : '',
+            'Remote'     : '',
             'Fileless'  : gen_random_string()
                     }
 
@@ -68,7 +68,7 @@ class TestExecution():
 
         # Print Results
         for xmethod, data in self.exec_method.items():
-            logger.info([smb_con.host, smb_con.ip, highlight(self.name.upper()), '   \033[1;30mExecution Method:\033[0m {:<10} \033[1;30mFileless: {:<20} \033[1;30mFiled (Defualt): {}'.format(data['Name'], data['Fileless'], data['Filed'])])
+            logger.info([smb_con.host, smb_con.ip, highlight(self.name.upper()), '   \033[1;30mExecution Method:\033[0m {:<10} \033[1;30mFileless: {:<20} \033[1;30mRemote (Defualt): {}'.format(data['Name'], data['Fileless'], data['Filed'])])
 
         # Shutdown SMBServer and Exit
         smb_srv_obj.cleanup_server()

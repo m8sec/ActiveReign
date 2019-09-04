@@ -36,7 +36,7 @@ def spray_args(sub_parser):
     # Domain
     #spray_domain = spray_parser.add_mutually_exclusive_group(required=False)
     spray_parser.add_argument('-d', dest='domain', type=str, default='', help='Set domain')
-    spray_parser.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticat to target host, no domain')
+    spray_parser.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
 
     # Timing options
     spray_parser.add_argument('-j', dest='jitter', type=float, default=0, help='jitter (sec)')

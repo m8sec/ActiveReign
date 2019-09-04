@@ -19,7 +19,7 @@ def first_run(logger):
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR)
 
-    for folder in ['certs', 'workspaces', 'scripts', 'tmp']:
+    for folder in ['certs', 'workspaces', 'scripts']:
         DIR = os.path.join(os.path.expanduser('~'), '.ar3', folder)
         if not os.path.exists(DIR):
             os.makedirs(DIR)

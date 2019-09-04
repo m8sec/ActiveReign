@@ -24,11 +24,11 @@ def enum_args(sub_parser):
     auth_pwd.add_argument('-H', '-hashes', dest='hash', type=str, default='', help='Use Hash for authentication')
     auth_pwd.add_argument('-p', dest='passwd', type=str, default='', help='Set password (Default=null)')
 
-    auth.add_argument('-id', dest='cred_id', type=int, help='Use creds from db for ldap/enumeration queries')
+    auth.add_argument('-id', dest='cred_id', type=int, help='Use creds from db for ldap queries/enumeration')
 
     auth_domain = auth.add_mutually_exclusive_group(required=False)
     auth_domain.add_argument('-d', dest='domain', type=str, default='', help='Set domain (Default=null)')
-    auth_domain.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticat to target host, no domain')
+    auth_domain.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
     enum_parser.add_argument('--threshold', dest='lockout_threshold', type=int, default=3,help='Domain/System Lockout Threshold ''(Exits 1 attempt before lockout)')
 
     enum = enum_parser.add_argument_group("Enumerating Options")
