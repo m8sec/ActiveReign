@@ -15,7 +15,7 @@ A few years back I was challenged to write a discovery tool with Python3 that co
  
 If you are doing a direct comparison, CME is an amazing tool that has way more features than currently implement here. However, I added a few modifications that may come in handy during an assessment.
 
-##### *Documentation, Demos and Wiki coming soon!*
+##### For more documentation checkout the project [wiki](https://github.com/m8r0wn/ActiveReign/wiki)
 
 ### Operational Modes
 * db    - Query or insert values in to ActiveReign database
