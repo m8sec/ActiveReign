@@ -11,7 +11,7 @@
 </p>
 
 ### Background
-A while back I was challenged to write a discovery tool with Python3 that could automate the process of finding sensitive information on network file shares. After writing the entire tool with pysmb, and adding features such as the ability to open and scan docx an xlsx files, I slowly started adding functionality from the awesome impacket library; just simple features I wanted to see in an internal penetration testing tool. The more I added, the more it looked like a Python3 rewrite of [CrackMapExec](https://github.com/byt3bl33d3r/CrackMapExec) created from scratch. 
+A while back I was challenged to write a discovery tool with Python3 that could automate the process of finding sensitive information on network file shares. After writing the entire tool with pysmb, and adding features such as the ability to open and scan docx an xlsx files, I slowly started adding functionality from the awesome [Impacket](https://github.com/SecureAuthCorp/impacket) library; just simple features I wanted to see in an internal penetration testing tool. The more I added, the more it looked like a Python3 rewrite of [CrackMapExec](https://github.com/byt3bl33d3r/CrackMapExec) created from scratch. 
  
 If you are doing a direct comparison, [CME](https://github.com/byt3bl33d3r/CrackMapExec) is an amazing tool that has way more features than currently implement here. However, I added a few modifications that may come in handy during an assessment.
 

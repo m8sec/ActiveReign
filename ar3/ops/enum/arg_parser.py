@@ -38,7 +38,7 @@ def enum_args(sub_parser):
     enum.add_argument('--services', dest='list_services', action='store_true', help='Show running services')
     enum.add_argument('--services-all', dest='all_services', action='store_true', help='Show all services')
     enum.add_argument('--tasklist', dest='list_processes', action='store_true', help='Show running processes')
-    enum.add_argument('-s', '--sharefinder', dest="sharefinder", action='store_true',help="Find open file shares with READ access")
+    enum.add_argument('-s', '--sharefinder', dest="sharefinder", action='store_true',help="Find open file shares & check access")
 
     creds = enum_parser.add_argument_group("Gathering Credentials")
     creds.add_argument('--sam', dest='sam', action='store_true', help='Dump local SAM db')
