@@ -81,9 +81,9 @@ def spray_arg_mods(args, db_obj, logger):
                 logger.debug('Using {}\{}:{} to perform ldap queries'.format(domain, username,password))
 
                 if hashes:
-                    logger.status(['Executing LDAP with:', '{}\{}'.format(domain, username), '\t[Hash=True]'])
+                    logger.status(['LDAP Authentication', '{}\{} (Password: None) (Hash: True)'.format(domain, username)])
                 else:
-                    logger.status(['Executing LDAP with:', '{}\{}'.format(domain, username),'\t[Password: {}*******]'.format(password[:2])])
+                    logger.status(['LDAP Authentication','{}\{} (Password: {}*******) (Hash: False])'.format(domain, username, password[:1])])
 
                 try:
                     # Define ldap server to not deal with lockout/replication issues
@@ -95,9 +95,10 @@ def spray_arg_mods(args, db_obj, logger):
                         l = LdapCon(username, password, hashes, domain, '', args.timeout)
                     l.create_ldap_con()
                     if not l:
-                        logger.fail('Unable to create LDAP connection')
+                        logger.status_fail(['LDAP Connection', 'Unable to create LDAP connection'])
                         exit(1)
-                    logger.success("LDAP connection established (server: {}) (LDAPS: {})".format(l.host, l.ldaps))
+                        logger.status_success(['LDAP Connection','Connection established (server: {}) (LDAPS: {})'.format(l.host,
+                                                                                                        l.ldaps)])
 
                     ########################################
                     # Get users via LDAP
@@ -109,10 +110,10 @@ def spray_arg_mods(args, db_obj, logger):
                             args.user = tmp_users.keys()
                             try:
                                 args.user.remove(username)
-                                logger.success2("Removed User: {} (Query User)".format(username))
+                                logger.status_success2(["Users", "Removed: {} (Query User)".format(username)])
                             except:
                                 pass
-                            logger.success('{} users collected'.format(len(args.user)))
+                            logger.status_success(['Users', '{} users'.format(len(args.user))])
 
                         else:
                             users = []
@@ -120,9 +121,9 @@ def spray_arg_mods(args, db_obj, logger):
                             try:
                                 tmp = l.domain_query(False)
                                 lockout_threshold = int(tmp[list(tmp.keys())[0]]['lockoutThreshold'])
-                                logger.success("Domain lockout threshold detected: {}\t Logon_Server: {}".format(lockout_threshold, l.host))
+                                logger.status_success("Domain lockout threshold detected: {}\t Logon_Server: {}".format(lockout_threshold, l.host))
                             except:
-                                logger.fail('Lockout threshold failed, using default threshold of {}'.format(args.default_threshold))
+                                logger.status_fail('Lockout threshold failed, using default threshold of {}'.format(args.default_threshold))
                                 lockout_threshold=args.default_threshold
 
                             # Compare and create user list
@@ -131,25 +132,25 @@ def spray_arg_mods(args, db_obj, logger):
 
                                     # Remove query user from list
                                     if user.lower() == username.lower():
-                                        logger.success2("Removed User: {} (Query User)".format(username))
+                                        logger.status_success2("Removed User: {} (Query User)".format(username))
                                     # Compare badpwd count + create new list
                                     if int(data['badPwdCount']) < (lockout_threshold - 1):
                                         users.append(user)
                                     else:
-                                        logger.success2("Removed User: {} (BadPwd: {})".format(user, data['badPwdCount']))
+                                        logger.status_success2("Removed User: {} (BadPwd: {})".format(user, data['badPwdCount']))
                                 except:
                                     # no badPwdCount value exists
                                     users.append(user)
 
                             args.user = users
-                            logger.success('{}/{} users collected'.format(len(args.user), len(tmp_users)))
+                            logger.status_success('{}/{} users collected'.format(len(args.user), len(tmp_users)))
 
                     ########################################
                     # get targets via ldap
                     ########################################
                     if args.target[0] == '{ldap}':
                         args.target = list(l.computer_query(False, False).keys())
-                        logger.success('{} computers collected'.format(len(args.target)))
+                        logger.status_success('{} computers collected'.format(len(args.target)))
 
                     l.close()
                 except Exception as e:

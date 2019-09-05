@@ -102,6 +102,11 @@ class AR3Adapter(logging.LoggerAdapter):
         msg = "{}[+] \033[1;30m{}\033[0m".format(code_gen('bold', 'green', 'None'), msg)
         self.logger.info(msg, *args, **kwargs)
 
+    def status_success2(self, msg, *args, **kwargs):
+        msg = self.msg_spacing(msg)
+        msg = "{}[+] \033[1;30m{}\033[0m".format(code_gen('bold', 'yellow', 'None'), msg)
+        self.logger.info(msg, *args, **kwargs)
+
     def status_fail(self, msg, *args, **kwargs):
         msg = self.msg_spacing(msg)
         msg = "{}[-] \033[1;30m{}\033[0m".format(code_gen('bold', 'red', 'None'), msg)

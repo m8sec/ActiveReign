@@ -57,5 +57,5 @@ def query_arg_mods(args, db_obj, logger):
     if args.hash:
         logger.status(['Query Authentication', '{}\{} (Password: None) (Hash: True)'.format(args.domain, args.user)])
     else:
-        logger.status(['Query Authentication', '{}\{} (Password: {}****) (Hash: False])'.format(args.domain, args.user, args.passwd[:1])])
+        logger.status(['Query Authentication', '{}\{} (Password: {}****) (Hash: False)'.format(args.domain, args.user, args.passwd[:1])])
     return args
