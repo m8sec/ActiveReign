@@ -68,7 +68,7 @@ class TestExecution():
 
         # Print Results
         for xmethod, data in self.exec_method.items():
-            logger.info([smb_con.host, smb_con.ip, highlight(self.name.upper()), '   \033[1;30mExecution Method:\033[0m {:<10} \033[1;30mFileless: {:<20} \033[1;30mRemote (Defualt): {}'.format(data['Name'], data['Fileless'], data['Filed'])])
+            logger.info([smb_con.host, smb_con.ip, highlight(self.name.upper()), '   \033[1;30mExecution Method:\033[0m {:<10} \033[1;30mFileless: {:<20} \033[1;30mRemote (Defualt): {}'.format(data['Name'], data['Fileless'], data['Remote'])])
 
         # Shutdown SMBServer and Exit
         smb_srv_obj.cleanup_server()
