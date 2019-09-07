@@ -1,3 +1,4 @@
+from time import sleep
 from random import choice
 from impacket.dcerpc.v5 import scmr
 from impacket.smb import SMB_DIALECT
@@ -9,9 +10,12 @@ from impacket.dcerpc.v5.epm import MSRPC_UUID_PORTMAP
 from impacket.dcerpc.v5.transport import DCERPCTransportFactory
 from impacket.examples.secretsdump import RemoteOperations, SAMHashes
 
+
 from ar3.logger import highlight
+from ar3.helpers import remotefile
 from ar3.core.connector import Connector
 from ar3.ops.enum.polenum import SAMRDump
+
 
 class SmbCon(Connector):
     def __init__(self, args, loggers, host, db):
@@ -257,3 +261,27 @@ class SmbCon(Connector):
             except Exception as e:
                 self.logger.debug("Error calling remote_ops.finish() for {}: {}".format(self.host, str(e)))
         SAM.finish()
+
+    ################################
+    # File Interaction
+    ################################
+    def createFile(self, filename, data, share='C$'):
+        # Create new file & write data, Not In Use
+        f = remotefile.RemoteFile(self.con, filename, share)
+        f.create()
+        f.write(data)
+        f.close()
+
+    def uploadFile(self, local_file, location, share='C$'):
+        f = open(local_file)
+        self.con.putFile(share, location, f.read)
+        f.close()
+
+    def downloadFile(self, remote_file, location='ar3_download', share='C$'):
+        f = open(location, 'wb')
+        self.con.getFile(share, remote_file, f.write)
+        f.close()
+        return
+
+    def deleteFile(self, remote_file, share='C$'):
+        self.con.deleteFile(share, remote_file)

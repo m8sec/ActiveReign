@@ -35,11 +35,22 @@ class AR3Shell(Connector):
 
     def help(self):
         print("""
-        help    - show this message
-        dir     - show PWD
-        cd      - Change directory
-        {cmd}   - Execute remote cmd
-        exit    - Close shell
+          help                                    - show this menu
+          exit                                    - Close shell
+        
+        Navigation:
+          pwd                                   - Show PWD
+          dir                                   - List PWD
+          cd                                    - Change directory
+          
+        File Interactions:
+          type [remote_file]                    - Show file contents    (Full Path Required)
+          download [remote_file] [location]     - Download remote file  (Full Path Required)
+          upload [local_file] [location]        - Upload local file     (Full Path Required)
+          delete [remote_file]                  - Delete remote file    (Full Path Required)
+          
+        Commands:
+          [cmd]                                 - Execute remote cmd
         """)
 
     def cd(self, cmd):
@@ -71,6 +82,39 @@ class AR3Shell(Connector):
             return self.cmd_execution("dir {}".format(self.pwd))
         else:
             return self.cmd_execution(cmd)
+
+    def download(self, cmd):
+        try:
+            val = cmd.split(" ")
+            self.smbcon.downloadFile(val[1], val[2])
+            self.logger.success("Download Complete: {}".format(val[2]))
+        except Exception as e:
+            if str(e) == "list index out of range":
+                self.logger.fail('Not enough values to unpack, see -h for more')
+            else:
+                self.logger.fail("Download Failed: {}".format(str(e)))
+
+    def upload(self, cmd):
+        try:
+            val = cmd.split(" ")
+            self.smbcon.uploadFile(val[1], val[2])
+            self.logger.success("Upload Complete: {}".format(val[2]))
+        except Exception as e:
+            if str(e) == "list index out of range":
+                self.logger.fail('Not enough values to unpack, see -h for more')
+            else:
+                self.logger.fail("Upload Failed: {}".format(str(e)))
+
+    def delete(self, cmd):
+        try:
+            val = cmd.split(" ")
+            self.smbcon.deleteFile(val[1])
+            self.logger.success("Download Complete: {}".format(val[1]))
+        except Exception as e:
+            if str(e) == "list index out of range":
+                self.logger.fail('Not enough values to unpack, see -h for more')
+            else:
+                self.logger.fail("Deletion Failed: {}".format(str(e)))
 
     def cmd_execution(self, cmd):
         self.filer.info("Command Execution\t{}\t{}\\{}\t{}".format(self.host, self.smbcon.ip, self.username, cmd))
@@ -109,6 +153,18 @@ class AR3Shell(Connector):
 
                 elif cmd.startswith('dir'):
                     self.dir(cmd)
+
+                elif cmd.startswith('download'):
+                    self.download(cmd)
+
+                elif cmd.startswith('upload'):
+                    self.upload(cmd)
+
+                elif cmd.startswith('delete'):
+                    self.delete(cmd)
+
+                elif cmd == 'pwd':
+                    self.logger.output(self.pwd)
 
                 else:
                     self.cmd_execution(cmd)

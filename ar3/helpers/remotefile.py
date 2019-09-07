@@ -41,14 +41,3 @@ class RemoteFile:
 
     def tell(self):
         return self.__currentOffset
-
-    '''
-    def createFile(self, data):
-        # Create new file & write data
-        try:
-            self.create()
-            self.write(data)
-            self.close()
-        except:
-            raise Exception('Failed to create: {}'.format(self.__fileName))
-    '''
