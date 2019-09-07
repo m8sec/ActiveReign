@@ -72,7 +72,6 @@ def enum_args(sub_parser):
     execution.add_argument('--slack', dest='slack', action='store_true',help='Send execution output to Slack (Config required)')
 
     target = enum_parser.add_argument_group("Scanning Options")
-    target.add_argument('-random', dest='random', action='store_true', help='Randomize scanning order')
     target.add_argument('--ldap-srv', dest='ldap_srv', type=str, default='', help='Define LDAP server')
     enum_parser.add_argument(dest='target', nargs='+', help='target.txt, 127.0.0.0/24, range, "ldap", "eol"')
 
