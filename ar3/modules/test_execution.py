@@ -27,7 +27,7 @@ class TestExecution():
             return
 
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
         # Log Results
         self.exec_method = {
@@ -56,6 +56,7 @@ class TestExecution():
         smb_srv_obj = SMBServer(loggers['console'], self.exec_type['Fileless'], verbose=args.debug)
         smb_srv_obj.start()
 
+        logger.info([smb_con.host, smb_con.ip, self.name.upper(), 'Testing execution methods'])
         # Test execution method using threading for timeouts
         try:
             for exec_method in self.exec_method:

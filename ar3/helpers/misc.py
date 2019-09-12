@@ -1,3 +1,4 @@
+import re
 import socket
 from requests import post
 from random import choice
@@ -46,3 +47,10 @@ def ps_encoder(command):
     if len(cmd) >= 8191:
         return False
     return cmd
+
+def validate_ntlm(data):
+    allowed = re.compile("^[0-9a-f]{32}", re.IGNORECASE)
+    if allowed.match(data):
+        return True
+    else:
+        return False

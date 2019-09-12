@@ -20,7 +20,7 @@ class ExampleModule():
     
     """
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         """
         Each module is executed from self.run, and passed the following arguments:
 

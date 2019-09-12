@@ -10,7 +10,7 @@ class InvokeKerberoast():
         self.credit = ['@harmj0y']
         self.args = {}
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
         # Again super lazy way of powershell execution need to redo
         try:

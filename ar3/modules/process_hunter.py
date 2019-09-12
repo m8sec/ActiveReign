@@ -13,7 +13,7 @@ class ProcessHunter():
             }
         }
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
         x = WmiCon(args, loggers, smb_con.ip, smb_con.host)
         try:

@@ -2,9 +2,11 @@ import os
 import threading
 from sys import exit
 from time import sleep
+from threading import Thread
 
 from ar3.servers.smb import SMBServer
 from ar3.ops.enum.spider import spider
+from ar3.servers.http import ar3_server
 from ar3.ops.enum.host_enum import host_enum
 from ar3.helpers.misc import gen_random_string
 from ar3.ops.enum.lockout_tracker import LockoutTracker
@@ -28,14 +30,17 @@ def requires_http_server(func):
 @requires_smb_server
 def smb_server_setup(options, logger):
     setattr(options, 'fileless_sharename', '{}$'.format(gen_random_string(7)))
-    smb_srv_obj = SMBServer(logger, options.fileless_sharename, verbose=options.debug)
+    smb_srv_obj = SMBServer(logger, options.fileless_sharename)
     smb_srv_obj.start()
     return smb_srv_obj
 
 
 @requires_http_server
 def http_server_setup(options, logger):
-    return
+    logger.debug('Starting AR3 HTTP Server')
+    logger.status('starting web server')
+    t = Thread(target=ar3_server, args=(logger,))
+    t.start()
 
 
 def thread_launcher(target, args, lockout_obj, config_obj, db_obj, loggers):

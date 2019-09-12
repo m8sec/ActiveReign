@@ -39,10 +39,10 @@ HIGHLIGHT = {
 
 class AR3Adapter(logging.LoggerAdapter):
     __FORMATTER = {
-        0: '{:<27}',  # Hostname
+        0: '{:<28}',  # Hostname
         1: '{:<16}',  # IP
         2: '{:<29}',  # Data label
-        3: '{:<47}',  # os/data
+        3: '{:<55}',  # os/data
         4: '{:<17}',  # Domain/data cont.
         5: '{:<17}',  # Signing
     }

@@ -5,6 +5,7 @@ from ar3.core.wmi import WmiCon
 from ar3.core.rpc import RpcCon
 from ar3.core.smb import SmbCon
 from ar3.logger import highlight
+from ar3.helpers import powershell
 from ar3.core.wmiexec import WMIEXEC
 from ar3.core.smbexec import SMBEXEC
 from ar3.helpers.misc import slack_post
@@ -46,30 +47,59 @@ def password_policy(con, args, db_obj, loggers):
 
 
 @requires_admin
-def code_execution(con, args, target, loggers, config_obj):
+def code_execution(con, args, target, loggers, config_obj, cmd=None, return_data=False):
+    # Used as the primary execution function for ps_execute and all modules.
+
+    # Get payload to execute
+    if cmd != None:
+        payload = cmd
+    else:
+        payload = args.execute
+
+    # Implement Execution Method
     if args.exec_method == 'wmiexec':
         executioner = WMIEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
     elif args.exec_method == 'smbexec':
         executioner = SMBEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
 
-    loggers[args.mode].info("Code Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, args.execute))
-    timer = ExecutionTimeout(executioner, args.execute)
+    # Log action to file
+    loggers[args.mode].info("Code Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, payload))
+
+    # Spawn thread for code execution timeout
+    timer = ExecutionTimeout(executioner, payload)
     exe_thread = Thread(target=timer.execute)
     exe_thread.start()
-    exe_thread.join(args.timeout + 3)  # Account for sleep timer in exec class
+    exe_thread.join(args.timeout+5)
 
+    # CMD Output
     if args.slack and config_obj.SLACK_API and config_obj.SLACK_CHANNEL:
-        post_data = "[Host: {}]\t[User:{}]\t[Command:{}]\r\n{}".format(con.host, args.user, args.execute, timer.result)
+        post_data = "[Host: {}]\t[User:{}]\t[Command:{}]\r\n{}".format(con.host, args.user, payload, timer.result)
         slack_post(config_obj.SLACK_API, config_obj.SLACK_CHANNEL, post_data)
+
+    # Return to module not print
+    if return_data:
+        return timer.result
 
     for line in timer.result.splitlines():
         loggers['console'].info([con.host, con.ip, "CODE EXECUTION", line])
 
+@requires_admin
+def ps_execution(con,args,target,loggers,config_obj):
+    try:
+        cmd = powershell.create_ps_command(args.ps_execute, loggers['console'], force_ps32=args.force_ps32, obfs=args.obfs, server_os=con.os)
+        code_execution(con, args, target, loggers, config_obj, cmd=cmd)
+    except Exception as e:
+        loggers['console'].debug([con.host, con.ip, "PS1 Execute", str(e)])
 
 @requires_admin
 def extract_sam(con, args, target, loggers):
     loggers[args.mode].info("Extract SAM\t{}\t{}\\{}".format(target, args.domain, args.user))
     con.sam()
+
+@requires_admin
+def extract_ntds(con, args, target, loggers):
+    loggers[args.mode].info("Dumping NTDS.DIT\t{}\t{}\\{}".format(target, args.domain, args.user))
+    con.ntds()
 
 
 def loggedon_users(con, args, target, loggers):
@@ -101,13 +131,13 @@ def wmi_query(con, args, target, loggers):
     q.wmi_query(args.wmi_namespace, args.wmi_query)
 
 
-def execute_module(con, args, target, loggers):
+def execute_module(con, args, target, loggers, config_obj):
     try:
         module_class = get_module_class(args.module)
         class_obj = module_class()
         populate_mod_args(class_obj, args.module_args, args.debug, loggers['console'])
         loggers[args.mode].info("Module Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, args.module))
-        class_obj.run(target, args, con, loggers)
+        class_obj.run(target, args, con, loggers, config_obj)
     except Exception as e:
         loggers['console'].fail([con.host, con.ip, args.module.upper(), "Error: {}".format(str(e))])
 
@@ -141,6 +171,8 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
             password_policy(con, args, db_obj, loggers)
         if args.sam:
             extract_sam(con, args, target, loggers)
+        if args.ntds:
+            extract_ntds(con, args, target, loggers)
         if args.loggedon:
             loggedon_users(con, args, target, loggers)
         if args.sessions:
@@ -151,8 +183,10 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
             wmi_query(con, args, target, loggers)
         if args.execute:
             code_execution(con, args, target, loggers, config_obj)
+        if args.ps_execute:
+            ps_execution(con, args, target, loggers, config_obj)
         if args.module:
-            execute_module(con, args, target, loggers)
+            execute_module(con, args, target, loggers, config_obj)
 
         # Close connections & return
         try:

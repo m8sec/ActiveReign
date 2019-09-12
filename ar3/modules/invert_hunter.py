@@ -4,7 +4,7 @@ from ar3.logger import highlight
 class InvertHunter():
     def __init__(self):
         self.name = 'invert_hunter'
-        self.description = 'Search system(s) for the absence of a process.'
+        self.description = 'Search system(s) for the absence of a process (i.e: AV_product.exe)'
         self.author = ['@m8r0wn']
         self.args = {
             'PROCESS': {
@@ -14,7 +14,7 @@ class InvertHunter():
             }
         }
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
         proc_found = False
         x = WmiCon(args, loggers, smb_con.ip, smb_con.host)

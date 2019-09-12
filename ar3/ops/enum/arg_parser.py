@@ -42,6 +42,8 @@ def enum_args(sub_parser):
 
     creds = enum_parser.add_argument_group("Gathering Credentials")
     creds.add_argument('--sam', dest='sam', action='store_true', help='Dump local SAM db')
+    creds.add_argument('--ntds', dest='ntds', action='store_true', help='Extract NTDS.dit file')
+    creds.add_argument('--use-vss', action='store_true', default=False, help='Use the VSS method insead of default DRSUAPI')
 
     wmi = enum_parser.add_argument_group("WMI Query")
     wmi.add_argument('--wmi', dest='wmi_query', type=str, default='', help='Execute WMI theory')
@@ -60,8 +62,13 @@ def enum_args(sub_parser):
     spider.add_argument('--filename', dest="filename_only", action='store_true', help="Scan Filenames & extensions only")
 
     execution = enum_parser.add_argument_group("Command Execution")
-    execution.add_argument('-x', dest='execute', type=str, default='', help='Command to execute on remote server')
-    execution.add_argument('-X', dest='ps_execute', type=str, default='', help='Execute command with PowerShell (Not Currently Available)')
+    psexec = execution.add_mutually_exclusive_group(required=False)
+    psexec.add_argument('-x', dest='execute', type=str, default='', help='Command to execute on remote server')
+    psexec.add_argument('-X', dest='ps_execute', type=str, default='', help='Execute command with PowerShell')
+
+    execution.add_argument('--force-ps32', dest='force_ps32', action='store_true',help='Run PowerShell command in a 32-bit process')
+    execution.add_argument('--obfs', dest='obfs', action='store_true', help='Obfuscate PowerShell scripts')
+
     execution.add_argument('--exec-method', dest='exec_method', type=str, default='wmiexec',help='Code execution method {wmiexec, smbexec}')
     execution.add_argument('--exec-ip', dest='exec_ip', type=str, default='127.0.0.1', help='Set server used for code execution output')
     execution.add_argument('--exec-share', dest='exec_share', type=str, default='C$',help='Set share used for code execution output')

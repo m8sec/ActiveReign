@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 # Author: @m8r0wn
 
-# @TODO PowerShell code execution, Ar3 HTTP Server, & Obfuscation
 # @TODO Cleanup debug messages & general output formatting
-# @TODO Log file formatting
 # @TODO Add additional code execution methods
 # @TODO MOAR MODULES!
-# @TODO MOAR DOCUMENTATION!
-# @TODO Refactor Code (Its a hot mess right now)
 
 import logging
 import argparse
@@ -23,9 +19,8 @@ from ar3.ops.query.arg_parser import query_args, query_arg_mods
 from ar3.ops.shell.arg_parser import shell_args, shell_arg_mods
 from ar3.logger import setup_logger,setup_file_logger,print_args
 
-
 def banner():
-    VERSION = "v0.0.3"
+    VERSION = "v0.1.0"
     BANNER = """  
 
                                    _____                  

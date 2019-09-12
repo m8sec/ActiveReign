@@ -47,10 +47,11 @@ Writing this tool and testing on a variety of networks/systems has taught me tha
 
 To help this investigation process, I have created a ```test_execution``` module to run against a system with known admin privileges. This will cycle through all all execution methods and provide a status report to determine the best method to use:
 ```bash
-$ activereign enum -u administrator -p password --local-auth -M test_execution 192.168.3.20
-[*] Lockout Tracker            Using default lockout threshold: 3
-[*] Enum Authentication        \administrator (Password: p****) (Hash: False)
-[+] WIN-T460                   192.168.3.20    ENUM             Windows 7 Ultimate 7601 Service Pack 1         (Domain: )       (Signing: False) (SMBv1: True) (Adm!n) 
-[*] WIN-T460                   192.168.3.20    TEST_EXECUTION   Execution Method: WMIEXEC    Fileless: SUCCESS   Remote (Defualt): SUCCESS
-[*] WIN-T460                   192.168.3.20    TEST_EXECUTION   Execution Method: SMBEXEC    Fileless: SUCCESS   Remote (Defualt): SUCCESS
+$ activereign enum -u administrator -p password -d demo.local -M test_execution dc02.demo.local
+[*] Lockout Tracker             Using default lockout threshold: 3
+[*] Enum Authentication         demo.local\administrator (Password: p****) (Hash: False)
+[+] DC02.demo.local             192.168.1.28    ENUM             Windows Server 2012 R2 Standard Evaluation 9600 x64(Domain: DEMO)   (Signing: True)  (SMBv1: True) (Adm!n) 
+[*] DC02.demo.local             192.168.1.28    TEST_EXECUTION   Testing execution methods...                   
+[*] DC02.demo.local             192.168.1.28    TEST_EXECUTION   Execution Method: WMIEXEC    Fileless: SUCCESS   Remote (Defualt): SUCCESS
+[*] DC02.demo.local             192.168.1.28    TEST_EXECUTION   Execution Method: SMBEXEC    Fileless: SUCCESS   Remote (Defualt): SUCCESS
 ```

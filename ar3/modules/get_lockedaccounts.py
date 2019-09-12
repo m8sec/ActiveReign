@@ -21,7 +21,7 @@ class GetLockedAccounts():
         }
 
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
         users = {}
         domain = {}

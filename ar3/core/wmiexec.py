@@ -77,10 +77,10 @@ class WMIEXEC():
         if self.noOutput:
             self._outputBuffer = "Command executed with no output"
         elif self.fileless_output:
-            sleep(3)
+            sleep(self.timeout)
             self.get_output_fileless()
         else:
-            sleep(3)
+            sleep(self.timeout)
             self.get_output()
 
         self.logger.debug( "Disconnecting win32 process")

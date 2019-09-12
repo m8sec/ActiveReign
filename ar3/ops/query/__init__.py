@@ -1,3 +1,4 @@
+from sys import exit
 from socket import gethostbyname
 
 from ar3.core.ldap import LdapCon
@@ -51,7 +52,7 @@ def main(args, config_obj, db_obj, loggers):
     try:
         query = LdapCon(args.user, args.passwd, args.hash, args.domain, args.srv, args.timeout)
         query.create_ldap_con()
-        logger.success('LDAP Connection', 'Connection established (server: {}) (LDAPS: {})'.format(query.host, query.ldaps))
+        logger.success(['LDAP Connection', 'Connection established (server: {}) (LDAPS: {})'.format(query.host, query.ldaps)])
 
         # Users
         if args.lookup_type in ['user', 'users']:
@@ -84,7 +85,6 @@ def main(args, config_obj, db_obj, loggers):
             logger.fail("Invalid query operation:\n\t"
                         "activereign query {user|group|computer|domain|trust|custom} -u {user} -p {password} -d {domain} -s {server}\n\t"
                         "activereign query {user|group|computer|domain|trust|custom} -q {lookup value} -a {attributes} -id {credID}")
-            return
 
         # Display results
         if args.lookup_type and resp:

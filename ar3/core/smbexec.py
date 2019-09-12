@@ -131,11 +131,11 @@ class SMBEXEC():
             self._outputBuffer = "Command executed with no output"
 
         elif self.fileless_output:
-            sleep(3)
+            sleep(self.timeout)
             self.get_output_fileless()
 
         else:
-            sleep(3)
+            sleep(self.timeout)
             self.get_output()
             # Delete tmp files on system
             self.logger.debug('Removing: {}'.format(self.outfile))

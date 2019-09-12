@@ -8,7 +8,7 @@ class WifiPasswords():
         self.author = ['@m8r0wn']
         self.args = {}
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         profiles = []
         logger = loggers['console']
 

@@ -13,7 +13,6 @@ from impacket.ntlm import compute_lmhash, compute_nthash
 
 class SMBServer(threading.Thread):
     def __init__(self, logger, share_name, share_path='/tmp/.ar3/smb', share_comment = '', username= '', password='', listen_address='0.0.0.0', listen_port=445, verbose=False):
-        self.logger = logger
         self.running = True
         self._smb2support = False
         self._share_path = share_path
@@ -28,7 +27,8 @@ class SMBServer(threading.Thread):
             # Setup SMB Server
             self.server = smbserver.SimpleSMBServer(listen_address, int(listen_port))
             self.server.addShare(share_name, share_path, share_comment)
-            if verbose: self.server.setLogFile('')
+            if verbose:
+                self.server.setLogFile('')
             self.server.setSMB2Support(self._smb2support)
             self.server.setSMBChallenge('')
 
@@ -41,9 +41,9 @@ class SMBServer(threading.Thread):
         except Exception as e:
             errno, message = e.args
             if errno == 98 and message == 'Address already in use':
-                self.logger.fail('Error starting SMB server on port 445: the port is already in use')
+                logger.fail('Error starting SMB server on port 445: the port is already in use')
             else:
-                self.logger.fail('Error starting SMB server on port 445: {}'.format(message))
+                logger.fail('Error starting SMB server on port 445: {}'.format(message))
                 exit(1)
 
     def addShare(self, share_name, share_path, share_comment):

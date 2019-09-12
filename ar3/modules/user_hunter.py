@@ -13,7 +13,7 @@ class UserHunter():
             }
         }
 
-    def run(self, target, args, smb_con, loggers):
+    def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
         x = RpcCon(args, loggers, target)
         try:
