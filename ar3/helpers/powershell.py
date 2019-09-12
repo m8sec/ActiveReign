@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # These are the people that did the hard work of figuring this out:
 # https://github.com/awsmhacks/CrackMapExtreme/blob/master/cmx/helpers/powershell.py
 # https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/helpers/powershell.py
@@ -7,7 +5,7 @@
 import re
 from base64 import b64encode
 from string import ascii_lowercase
-from random import choice, choices, sample
+from random import choice, sample
 
 ############################
 # PS Code Execution on Host
