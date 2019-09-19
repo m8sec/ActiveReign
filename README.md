@@ -37,7 +37,6 @@ If you are doing a direct comparison, [CME](https://github.com/byt3bl33d3r/Crack
 ### Acknowledgments
 There were many intended and unintended contributors that made this project possible. If I am missing any, I apologize, it was in no way intentional. Feel free to contact me and we can make sure they get the credit they deserve ASAP!
 * [@byt3bl33d3r](https://github.com/byt3bl33d3r) -  [CrackMapExec](https://github.com/byt3bl33d3r/CrackMapExec)
-* [@awsmhacks](https://github.com/awsmhacks) -  [CrackMapExtreme](https://github.com/awsmhacks/CrackMapExtreme)
 * [@SecureAuthCorp](https://github.com/SecureAuthCorp) - [Impacket](https://github.com/SecureAuthCorp/impacket)
 * [@the-useless-one](https://github.com/the-useless-one) - [pywerview](https://github.com/the-useless-one/pywerview)
 * [@dirkjanm](https://github.com/dirkjanm) - [ldapdomaindump](https://github.com/dirkjanm/ldapdomaindump)
