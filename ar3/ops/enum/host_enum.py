@@ -66,10 +66,12 @@ def code_execution(con, args, target, loggers, config_obj, cmd=None, return_data
     loggers[args.mode].info("Code Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, payload))
 
     # Spawn thread for code execution timeout
+
     timer = ExecutionTimeout(executioner, payload)
     exe_thread = Thread(target=timer.execute)
     exe_thread.start()
     exe_thread.join(args.timeout+5)
+    exe_thread.running = False
 
     # CMD Output
     if args.slack and config_obj.SLACK_API and config_obj.SLACK_CHANNEL:
@@ -81,13 +83,15 @@ def code_execution(con, args, target, loggers, config_obj, cmd=None, return_data
         return timer.result
 
     for line in timer.result.splitlines():
-        loggers['console'].info([con.host, con.ip, "CODE EXECUTION", line])
+        loggers['console'].info([con.host, con.ip, "CMD EXECUTION", line])
 
 @requires_admin
 def ps_execution(con,args,target,loggers,config_obj):
     try:
         cmd = powershell.create_ps_command(args.ps_execute, loggers['console'], force_ps32=args.force_ps32, obfs=args.obfs, server_os=con.os)
-        code_execution(con, args, target, loggers, config_obj, cmd=cmd)
+        result = code_execution(con, args, target, loggers, config_obj, cmd=cmd, return_data=True)
+        for line in result.splitlines():
+            loggers['console'].info([con.host, con.ip, "PS1 EXECUTION", line])
     except Exception as e:
         loggers['console'].debug([con.host, con.ip, "PS1 Execute", str(e)])
 

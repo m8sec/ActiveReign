@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='ActiveReign',
-    version='0.1.0',
+    version='0.1.1',
     author = 'm8r0wn',
     author_email = 'm8r0wn@protonmail.com',
     description = 'A network enumeration and attack toolset',

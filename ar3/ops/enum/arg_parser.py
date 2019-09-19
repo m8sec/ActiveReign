@@ -7,7 +7,6 @@ from ar3.core.ldap import LdapCon
 from ar3.modules import list_modules
 
 def enum_args(sub_parser):
-    # Create Subparser
     enum_parser = sub_parser.add_parser("enum", help='- System enumeration & Module execution')
 
     if "-L" in argv:

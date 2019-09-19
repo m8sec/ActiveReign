@@ -3,9 +3,9 @@ class ExecutionTimeout():
         self.result = "Code execution failed: Try \"-M test_execution\" for the best approach"
         self.exec_obj = exec_obj
         self.command = command
+        self.running = True
 
     def execute(self):
-        try:
+        while self.running:
             self.result = self.exec_obj.execute(self.command)
-        except:
-            pass
+            self.running = False

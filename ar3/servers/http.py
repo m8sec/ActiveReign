@@ -27,12 +27,11 @@ class RequestHandler():
     def send_payload(self, sock, page):
         file = os.path.join(os.path.expanduser('~'), '.ar3', 'scripts', page)
         if os.path.exists(file):
-                data = clean_ps_script(file)
+                data_count = 0
                 self.resp += "Content-Type: text/plain; charset-utf-8\r\n\r\n"
-                self.resp += data
+                self.resp += clean_ps_script(file)
                 sock.sendall(self.resp.encode('UTF-8'))
-                del(data)
-                self.logger.debug("Finished serving payload")
+                self.logger.debug("Finished serving payload: {}".format(page))
         else:
             self.logger.debug('Invalid payload requested: \'{}\''.format(page))
 
@@ -54,10 +53,7 @@ def ar3_server(logger):
     while True:
         client_socket, addr = sock.accept()
         try:
-            path = os.path.join(os.path.expanduser('~'), '.ar3', 'certs')
-            # Sorry no HTTPS yet, it was breaking things :(
-            #ssl_sock = ssl.wrap_socket(client_socket, server_side=True, certfile=path+'/cert.pem', keyfile=path+'/key.pem', ssl_version=ssl.PROTOCOL_SSLv23)
-            logger.debug('new HTTP connection from {}'.format(addr))
+            logger.debug('New HTTP connection from {}'.format(addr))
             Thread(target=RequestHandler, args=(client_socket,addr,logger,), daemon=True).start()
         except Exception as e:
             try:

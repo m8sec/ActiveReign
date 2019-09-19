@@ -13,22 +13,23 @@ from ar3.ops.enum.lockout_tracker import LockoutTracker
 
 def requires_smb_server(func):
     def _decorator(options, *args, **kwargs):
-        if not options.fileless:
-            return False
-        return func(options, *args, **kwargs)
+        if  options.fileless:
+            return func(options, *args, **kwargs)
+        return False
     return _decorator
 
 
 def requires_http_server(func):
     def _decorator(options, *args, **kwargs):
-        if not options.ps_execute and not options.fileless:
-            return False
-        return func(options, *args, **kwargs)
+        if options.fileless:
+            return func(options, *args, **kwargs)
+        return False
     return _decorator
 
 
 @requires_smb_server
 def smb_server_setup(options, logger):
+    logger.debug('Starting AR3 SMB Server')
     setattr(options, 'fileless_sharename', '{}$'.format(gen_random_string(7)))
     smb_srv_obj = SMBServer(logger, options.fileless_sharename)
     smb_srv_obj.start()
@@ -38,7 +39,6 @@ def smb_server_setup(options, logger):
 @requires_http_server
 def http_server_setup(options, logger):
     logger.debug('Starting AR3 HTTP Server')
-    logger.status('starting web server')
     t = Thread(target=ar3_server, args=(logger,))
     t.start()
 
