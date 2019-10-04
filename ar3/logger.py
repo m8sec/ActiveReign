@@ -41,7 +41,7 @@ class AR3Adapter(logging.LoggerAdapter):
     __FORMATTER = {
         0: '{:<28}',  # Hostname
         1: '{:<16}',  # IP
-        2: '{:<29}',  # Data label
+        2: '{:<28} ',  # Data label
         3: '{:<55}',  # os/data
         4: '{:<17}',  # Domain/data cont.
         5: '{:<17}',  # Signing
@@ -124,7 +124,7 @@ class AR3Adapter(logging.LoggerAdapter):
 
 
     def debug(self, msg, *args, **kwargs):
-        msg, kwargs = self.process(msg, kwargs, color='cyan', highlight='None', style='bold', bullet='[Debug]')
+        msg, kwargs = self.process(msg, kwargs, color='cyan', highlight='None', style='bold', bullet='[D]')
         self.logger.debug(msg, *args, **kwargs)
 
 

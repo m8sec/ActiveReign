@@ -12,8 +12,8 @@ def enum_args(sub_parser):
     if "-L" in argv:
         list_modules()
         exit(0)
-
     enum_parser.add_argument('-t', dest='timeout', type=int, default=5,help='Connection timeout')
+    enum_parser.add_argument('--refresh', dest="refresh", action='store_true', help="Download/update PowerShell scripts")
     enum_parser.add_argument('--gen-relay-list', dest='gen_relay_list', action='store_true', help='Create a file of all hosts that dont require SMB signing')
 
     auth = enum_parser.add_argument_group("Host Authentication")
@@ -45,7 +45,9 @@ def enum_args(sub_parser):
     creds.add_argument('--use-vss', action='store_true', default=False, help='Use the VSS method insead of default DRSUAPI')
 
     wmi = enum_parser.add_argument_group("WMI Query")
-    wmi.add_argument('--wmi', dest='wmi_query', type=str, default='', help='Execute WMI theory')
+    wmi.add_argument('--local-groups', dest='local_groups', action='store_true', help='List system local groups')
+    wmi.add_argument('--local-members', dest='local_members', type=str, default='', help='List local group members')
+    wmi.add_argument('--wmi', dest='wmi_query', type=str, default='', help='Execute WMI query')
     wmi.add_argument('--wmi-namespace', dest='wmi_namespace', type=str, default='root\\cimv2', help='WMI namespace (Default: root\\cimv2)')
 
     modules = enum_parser.add_argument_group("Module Execution")
@@ -61,14 +63,14 @@ def enum_args(sub_parser):
     spider.add_argument('--filename', dest="filename_only", action='store_true', help="Scan Filenames & extensions only")
 
     execution = enum_parser.add_argument_group("Command Execution")
-    psexec = execution.add_mutually_exclusive_group(required=False)
-    psexec.add_argument('-x', dest='execute', type=str, default='', help='Command to execute on remote server')
-    psexec.add_argument('-X', dest='ps_execute', type=str, default='', help='Execute command with PowerShell')
+    ps1exec = execution.add_mutually_exclusive_group(required=False)
+    ps1exec.add_argument('-x', dest='execute', type=str, default='', help='Command to execute on remote server')
+    ps1exec.add_argument('-X', dest='ps_execute', type=str, default='', help='Execute command with PowerShell')
 
     execution.add_argument('--force-ps32', dest='force_ps32', action='store_true',help='Run PowerShell command in a 32-bit process')
-    execution.add_argument('--obfs', dest='obfs', action='store_true', help='Obfuscate PowerShell scripts')
+    execution.add_argument('--no-obfs', dest='no_obfs', action='store_true', help='Do not obfuscate PowerShell commands')
 
-    execution.add_argument('--exec-method', dest='exec_method', type=str, default='wmiexec',help='Code execution method {wmiexec, smbexec}')
+    execution.add_argument('--exec-method', dest='exec_method', type=str, default='wmiexec',help='Code execution method {wmiexec, smbexec, winrm}')
     execution.add_argument('--exec-ip', dest='exec_ip', type=str, default='127.0.0.1', help='Set server used for code execution output')
     execution.add_argument('--exec-share', dest='exec_share', type=str, default='C$',help='Set share used for code execution output')
     execution.add_argument('--exec-path', dest='exec_path', type=str, default='\\Windows\\Temp\\', help='Set path used for code execution output')
@@ -81,44 +83,58 @@ def enum_args(sub_parser):
     target.add_argument('--ldap-srv', dest='ldap_srv', type=str, default='', help='Define LDAP server')
     enum_parser.add_argument(dest='target', nargs='+', help='target.txt, 127.0.0.0/24, range, "ldap", "eol"')
 
-def enum_arg_mods(args, db_obj, logger):
-    # Collect creds if not provided
+def enum_arg_mods(args, db_obj, loggers):
+    logger  = loggers['console']
+    context = argparse.Namespace(
+         mode       = args.mode,
+         timeout    = args.timeout,
+         local_auth = args.local_auth,
+         debug      = args.debug,
+         user       = False,
+         passwd     = False,
+         hash       = False,
+         domain     = False,
+        )
+
+    # Ask user for creds if user present and no password
     if not args.passwd and args.user and not args.hash:
         args.passwd = getpass("Enter password, or continue with null-value: ")
 
+    # Cred ID present & no user/pass provided
     elif args.cred_id and not args.user:
         enum_user = db_obj.extract_user(args.cred_id)
-        args.user    = enum_user[0][0]
-        args.passwd  = enum_user[0][1]
-        args.hash    = enum_user[0][2]
-        args.domain  = enum_user[0][3]
+        context.user    = enum_user[0][0],
+        context.passwd  = enum_user[0][1],
+        context.hash    = enum_user[0][2],
+        context.domain  = enum_user[0][3],
 
-    # Gather target systems
-    if args.target[0].startswith("{"):
-        if args.cred_id:
+    # Gather target systems using ldap
+    if args.target[0] in ['{ldap}', '{eol}']:
+        if args.cred_id and not context.user:
             ldap_user = db_obj.extract_user(args.cred_id)
-            username    = ldap_user[0][0]
-            password    = ldap_user[0][1]
-            hashes      = ldap_user[0][2]
-            domain      = ldap_user[0][3]
+            context.user    = ldap_user[0][0],
+            context.passwd  = ldap_user[0][1],
+            context.hash    = ldap_user[0][2],
+            context.domain  = ldap_user[0][3],
+
         elif args.domain:
-            username = args.user
-            password = args.passwd
-            hashes = args.hash
-            domain = args.domain
+            context.user     = args.user
+            context.passwd   = args.passwd
+            context.hash     = args.hash
+            context.domain   = args.domain
+
         else:
             logger.warning("To use the LDAP feature, please select a valid credential ID or enter domain credentials")
             logger.warning("Insert credentials:\n\tactivereign db insert -u username -p Password123 -d domain.local")
             exit(0)
 
-
-        if hashes:
-            logger.status(['LDAP Authentication', '{}\{} (Password: None) (Hash: True)'.format(domain, username)])
+        if context.hash:
+            logger.status(['LDAP Authentication', '{}\{} (Password: None) (Hash: True)'.format(context.domain, context.user)])
         else:
-            logger.status(['LDAP Authentication', '{}\{} (Password: {}*******) (Hash: False])'.format(domain, username, password[:1])])
+            logger.status(['LDAP Authentication', '{}\{} (Password: {}*******) (Hash: False])'.format(context.domain, context.user, context.passwd[:1])])
 
         try:
-            l = LdapCon(username, password, hashes, domain, args.ldap_srv, args.timeout)
+            l = LdapCon(context, loggers, args.ldap_srv, db_obj)
             l.create_ldap_con()
             if not l:
                 logger.status_fail(['LDAP Connection', 'Unable to create LDAP connection'])
@@ -144,7 +160,7 @@ def enum_arg_mods(args, db_obj, logger):
         tmp = db_obj.extract_lockout(args.domain)
         if tmp:
             args.lockout_threshold = tmp
-            logger.status(["Lockout Tracker", "Threshold Extracted from database: {}".format(str(tmp))])
+            logger.status(["Lockout Tracker", "Threshold extracted from database: {}".format(str(tmp))])
         else:
             logger.status(["Lockout Tracker", "Using default lockout threshold: {}".format(str(args.lockout_threshold))])
     else:

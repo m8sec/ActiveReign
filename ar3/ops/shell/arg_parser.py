@@ -23,12 +23,14 @@ def shell_args(sub_parser):
     execution.add_argument('--exec-share', dest='exec_share', type=str, default='C$',help='Set share used for code execution output')
     execution.add_argument('--exec-path', dest='exec_path', type=str, default='\\Windows\\Temp\\',help='Set path used for code execution output')
     execution.add_argument('--fileless', dest='fileless', action='store_true',help='Spawn SMB server for code execution output')
+    # Hidden Args: Required for execution methods to work but not applicable to the operational mode
+    execution.add_argument('--ps_execute', dest='ps_execute', action='store_true',help=argparse.SUPPRESS)
     execution.add_argument('--fileless_sharename', dest='fileless_sharename', type=str, default='',help=argparse.SUPPRESS)
     execution.add_argument('--no-output', dest='no_output', action='store_true', help=argparse.SUPPRESS)
 
     shell_parser.add_argument(dest='target', nargs='+', help='System to generate simulated shell')
 
-def shell_arg_mods(args, db_obj, logger):
+def shell_arg_mods(args, db_obj, loggers):
     if args.user and not args.passwd and not args.hash:
         # Get password if not provided
         args.passwd = getpass("Enter password, or continue with null-value: ")
@@ -41,11 +43,11 @@ def shell_arg_mods(args, db_obj, logger):
             args.hash   = enum_user[0][2]
             args.domain = enum_user[0][3]
         else:
-            logger.fail("Unable to gather credentials from db, check workspace and try again")
+            loggers['console'].fail("Unable to gather credentials from db, check workspace and try again")
             exit(1)
     args.target = args.target[0]
     if args.hash:
-        logger.status(['Shell Authentication: {}\{} (Password: None) (Hash: True)'.format(args.domain, args.user)])
+        loggers['console'].status(['Shell Authentication: {}\{} (Password: None) (Hash: True)'.format(args.domain, args.user)])
     else:
-        logger.status(['Shell Authentication: {}\{} (Password: {}****) (Hash: False)'.format(args.domain, args.user, args.passwd[:1])])
+        loggers['console'].status(['Shell Authentication: {}\{} (Password: {}****) (Hash: False)'.format(args.domain, args.user, args.passwd[:1])])
     return args

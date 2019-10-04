@@ -35,7 +35,7 @@ def regex_search(regex, max_chars, line, line_count, filename):
                     return { 'Parser': 'Regex',
                              'ParserDetails': key,
                              'LineCount': line_count,
-                             'LineSample': x.replace("\"", "'")}
+                             'LineSample': """{}""".format(x)}#.replace("\"", "'")}
         except Exception as e:
             if "bytes-like object" in str(e):
                 return False

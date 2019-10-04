@@ -3,16 +3,17 @@ from ar3.logger import highlight
 def share_finder(con, args, loggers, target):
     valid_shares = []
     target_shares = {}
+
     try:
         target_shares = share_perms(con)
         for share, data in target_shares.items():
+
             if data['read'] == 'READ' or data['write'] == 'WRITE':
                 loggers['console'].info([con.host, con.ip, "SHAREFINDER", "\\\\{}\\{}".format(con.host, share), highlight("{:<5}{:<10}".format(data['read'],data['write'])), data['description']])
             else:
-                # @TODO Add verbose logging mode that prints all shares, not just ones we have access to
                 loggers['console'].info([con.host, con.ip, "SHAREFINDER", "\\\\{}\\{}".format(con.host, share),highlight("{:<5}{:<10}".format(data['read'], data['write'])), data['description']])
 
-            """Log all shares to enum.csv"""
+            #Log all shares to enum.csv
             loggers[args.mode].info("ShareFinder\t{}\t{}\t\\\\{}\\{}\t{}\t{}".format(target, args.user, target,share, data['read'], data['write'], data['description']))
 
             if data['read'] == 'READ':

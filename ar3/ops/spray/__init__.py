@@ -10,10 +10,14 @@ from ar3.helpers.misc import get_timestamp
 
 
 def main(args, config_obj, db_obj, loggers):
+
     for passwd in args.passwd:
-        loggers['console'].info("\033[1;30mPerforming Password Spray @ {} [Users: {}] [Password: {}****] [Method: {}]\033[0m".format(get_timestamp(),len(args.user),passwd[0],args.method))
+        loggers['console'].info("\033[1;30mPerforming Password Spray @ {} [Users: {}] [Password: {}****] [Method: {}]\033[0m".format(get_timestamp(),len(args.user), passwd, args.method))
         for target in args.target:
             for user in args.user:
+
+                if args.combo:
+                    user, passwd = user.split(':')
 
                 # Create new namespace to pass to spray handler
                 auth_args = Namespace(user         = user,
@@ -44,10 +48,8 @@ def spray(auth_args, loggers, db_obj, config_obj, target, user, passwd):
 
     try:
         if auth_args.method.lower() == "ldap":
-            con = LdapCon(user, passwd, auth_args.hash, auth_args.domain, target, auth_args.timeout)
+            con = LdapCon(auth_args, loggers, target, db_obj)
             con.create_ldap_con()
-            # SMB add valid creds to db on auth, ldap doesnt...
-            db_obj.update_user(user, '{}'.format(passwd), auth_args.domain, auth_args.hash)
 
         elif auth_args.method.lower() == 'smb':
             con = SmbCon(auth_args, loggers, target, db_obj)
@@ -55,9 +57,9 @@ def spray(auth_args, loggers, db_obj, config_obj, target, user, passwd):
 
         if auth_args.hash: passwd = auth_args.hash
         if hasattr(con, 'admin')and con.admin == True:
-            loggers['console'].success([con.host, con.ip, auth_args.method.upper(), '{}\\{:<20} {}    {}'.format(con.domain, user, passwd, highlight(config_obj.PWN3D_MSG, 'yellow'))])
+            loggers['console'].success([con.host, con.ip, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(con.domain, user, passwd, highlight(config_obj.PWN3D_MSG, 'yellow'))])
         else:
-            loggers['console'].success([con.host, con.ip, auth_args.method.upper(),'{}\\{:<20} {}    {}'.format(con.domain, user, passwd, highlight("SUCCESS", "green"))])
+            loggers['console'].success([con.host, con.ip, auth_args.method.upper(),'{}\\{:<20} {:<15} {}'.format(con.domain, user, passwd, highlight("SUCCESS", "green"))])
         loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\tSuccess".format(target, auth_args.domain, user, passwd))
         con.close()
 
@@ -74,24 +76,24 @@ def spray(auth_args, loggers, db_obj, config_obj, target, user, passwd):
         if auth_args.hash: passwd = auth_args.hash
 
         if "password has expired" in str(e).lower():
-            loggers['console'].success2([target, target, auth_args.method.upper(), '{}\\{:<20} {}    {}'.format(auth_args.domain, user, passwd, highlight("PASSWORD EXPIRED", color='yellow'))])
+            loggers['console'].success2([target, target, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight("PASSWORD EXPIRED", color='yellow'))])
             loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\tPassword Expired".format(target, auth_args.domain, user, passwd))
 
         elif "account_locked_out" in str(e).lower():
-            loggers['console'].warning([target, target, auth_args.method.upper(), '{}\\{:<20} {}    {}'.format(auth_args.domain, user, passwd, highlight("ACCOUNT LOCKED", color='red'))])
+            loggers['console'].warning([target, target, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight("ACCOUNT LOCKED", color='red'))])
             loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\tAccount Locked".format(target, auth_args.domain, user, passwd))
             exit(1)
 
         elif str(e) == "Connection to Server Failed":
-            loggers['console'].verbose([target, target, auth_args.method.upper(), '{}\\{:<20} {}    {}'.format(auth_args.domain, user, passwd, highlight("CONNECTION ERROR", color='red'))])
+            loggers['console'].verbose([target, target, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight("CONNECTION ERROR", color='red'))])
             loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\tConnection Error".format(target, auth_args.domain, user, passwd))
 
         elif "status_logon_failure" in str(e).lower() or "invalidCredentials" in str(e).lower():
-            loggers['console'].verbose([target, target, auth_args.method.upper(), '{}\\{:<20} {}    {}'.format(auth_args.domain, user, passwd, highlight("FAILED", color='red'))])
+            loggers['console'].verbose([target, target, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight("FAILED", color='red'))])
             loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\tLogin Failed".format(target, auth_args.domain, user, passwd))
 
         else:
-            loggers['console'].debug([target, target, auth_args.method.upper(), '{}\\{:<20} {}    {}'.format(auth_args.domain, user, passwd, highlight(str(e), color='red'))])
+            loggers['console'].debug([target, target, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight(str(e), color='red'))])
             loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\t{}".format(target, auth_args.domain, user, passwd, str(e)))
     sleep(auth_args.jitter)
     del auth_args

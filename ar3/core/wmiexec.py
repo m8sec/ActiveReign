@@ -62,7 +62,7 @@ class WMIEXEC():
         self.logger.debug( "WMIExec: DCOM connection created")
 
         # Init New Command
-        self._outputBuffer = ''
+        self.__outputBuffer = ''
 
         if self.noOutput:
             cmd = self.shell + command
@@ -75,25 +75,23 @@ class WMIEXEC():
 
         # Get output
         if self.noOutput:
-            self._outputBuffer = "Command executed with no output"
+            self.__outputBuffer = "Command executed with no output"
         elif self.fileless_output:
-            sleep(self.timeout)
             self.get_output_fileless()
         else:
-            sleep(self.timeout)
             self.get_output()
 
         self.logger.debug( "Disconnecting win32 process")
         self.dcom.disconnect()
-        return self._outputBuffer
+        return self.__outputBuffer
 
 
     def get_output(self, CODEC='UTF-8'):
         def output_callback(data):
             try:
-                self._outputBuffer += data.decode(CODEC)
+                self.__outputBuffer += data.decode(CODEC)
             except UnicodeDecodeError:
-                self._outputBuffer += data.decode(CODEC, errors='replace')
+                self.__outputBuffer += data.decode(CODEC, errors='replace')
 
         while True:
             try:
@@ -109,19 +107,16 @@ class WMIEXEC():
                     self.logger.debug( 'Connection broken, trying to recreate it')
                     self.smbcon.con.reconnect()
                     return self.get_output()
-
         # Cleanup, delete tmp outfile
         self.smbcon.con.deleteFile(self.share, "{}{}".format(self.path.replace('\\','/'), self.outfile))
 
     def get_output_fileless(self):
+        def output_callback_fileless(data):
+            self.__outputBuffer += data
         while True:
             try:
-                with open(os.path.join('/tmp', '.ar3', 'smb', self.outfile), 'r') as output:
-                    self.output_callback(output.read())
+                with open(os.path.join('/tmp', '.ar3', self.outfile), 'r') as output:
+                    output_callback_fileless(output.read())
                 break
             except IOError:
                 sleep(2)
-
-    def output_callback(self, data):
-        self._outputBuffer += data
-

@@ -5,12 +5,12 @@ class Connector():
         self.lmhash     = ''
         self.nthash     = ''
 
+        # Loggers
         self.logger     = loggers['console']
         self.filer      = loggers[args.mode]
 
-        self.host       = host
+        # Authentication
         self.args       = args
-        self.ip         = get_ip(self.host)
         self.username   = args.user
         self.password   = args.passwd
         self.hash       = args.hash
@@ -19,12 +19,17 @@ class Connector():
         self.debug      = args.debug
         self.timeout    = args.timeout
 
+        # Target Host
+        self.host = host
         if not self.host:
             self.host = self.domain
+        self.ip = get_ip(self.host)
 
+        # Domain
         if self.local_auth:
             self.domain = self.host
 
+        # Hash Authentication
         if self.hash:
             try:
                 self.lmhash, self.nthash = self.hash.split(':')

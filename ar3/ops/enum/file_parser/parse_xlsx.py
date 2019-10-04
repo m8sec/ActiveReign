@@ -13,6 +13,7 @@ def parse_xlsx(xlsx_headers, regex, max_size, max_chars, timeout, con, share, pa
         for ws in wb.sheetnames:
             ws = wb[ws]
             for row in ws.rows:
+                print(row)
                 # Due to the format of xlsx docs on parser first 10 lines
                 if rcount == 10: break # Move to next sheet
                 for cell in row:
@@ -34,6 +35,6 @@ def parse_xlsx(xlsx_headers, regex, max_size, max_chars, timeout, con, share, pa
                 # Next Row
                 rcount += 1
         close_fileobj(file_obj)
-    except Exception as e:
+    except:
         pass
     return False

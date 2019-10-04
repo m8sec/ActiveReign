@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='ActiveReign',
-    version='0.1.1',
+    version='1.0.0',
     author = 'm8r0wn',
     author_email = 'm8r0wn@protonmail.com',
     description = 'A network enumeration and attack toolset',
@@ -20,12 +20,12 @@ setup(
     install_requires=[
                     'bs4',
                     'pysmb',
+                    'pywinrm',
                     'requests',
                     'openpyxl',
                     'python-docx',
                     'terminaltables',
                     'ipparser>=0.3.5',
-                    'http-server-base'
     ],
     classifiers = [
                     "Environment :: Console",
@@ -34,7 +34,7 @@ setup(
                     "Topic :: Security"
     ],
     entry_points= {
-                    'console_scripts': ['ar3=ar3:main', 'activereign=ar3:main']
+                    'console_scripts': ['ar3=ar3:main', 'activereign=ar3:main', 'ar3db=ar3.ops.db.db_shell:main']
     })
 
 """Install Submodules"""

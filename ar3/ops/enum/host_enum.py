@@ -5,6 +5,7 @@ from ar3.core.wmi import WmiCon
 from ar3.core.rpc import RpcCon
 from ar3.core.smb import SmbCon
 from ar3.logger import highlight
+from ar3.core.winrm import WINRM
 from ar3.helpers import powershell
 from ar3.core.wmiexec import WMIEXEC
 from ar3.core.smbexec import SMBEXEC
@@ -47,26 +48,19 @@ def password_policy(con, args, db_obj, loggers):
 
 
 @requires_admin
-def code_execution(con, args, target, loggers, config_obj, cmd=None, return_data=False):
-    # Used as the primary execution function for ps_execute and all modules.
-
-    # Get payload to execute
-    if cmd != None:
-        payload = cmd
-    else:
-        payload = args.execute
-
+def code_execution(con, args, target, loggers, config_obj, payload, return_data=False):
     # Implement Execution Method
-    if args.exec_method == 'wmiexec':
+    if args.exec_method.lower() == 'wmiexec':
         executioner = WMIEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
-    elif args.exec_method == 'smbexec':
+    elif args.exec_method.lower() == 'smbexec':
         executioner = SMBEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
+    elif args.exec_method.lower() == 'winrm':
+        executioner = WINRM(loggers['console'], target, args, con, share_name=False)
 
     # Log action to file
     loggers[args.mode].info("Code Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, payload))
 
     # Spawn thread for code execution timeout
-
     timer = ExecutionTimeout(executioner, payload)
     exe_thread = Thread(target=timer.execute)
     exe_thread.start()
@@ -83,17 +77,17 @@ def code_execution(con, args, target, loggers, config_obj, cmd=None, return_data
         return timer.result
 
     for line in timer.result.splitlines():
-        loggers['console'].info([con.host, con.ip, "CMD EXECUTION", line])
+        loggers['console'].info([con.host, con.ip, args.exec_method.upper(), line])
 
 @requires_admin
 def ps_execution(con,args,target,loggers,config_obj):
     try:
-        cmd = powershell.create_ps_command(args.ps_execute, loggers['console'], force_ps32=args.force_ps32, obfs=args.obfs, server_os=con.os)
-        result = code_execution(con, args, target, loggers, config_obj, cmd=cmd, return_data=True)
+        cmd = powershell.create_ps_command(args.ps_execute, loggers['console'], force_ps32=args.force_ps32, no_obfs=args.no_obfs, server_os=con.os)
+        result = code_execution(con, args, target, loggers, config_obj, cmd, return_data=True)
         for line in result.splitlines():
-            loggers['console'].info([con.host, con.ip, "PS1 EXECUTION", line])
+            loggers['console'].info([con.host, con.ip, args.exec_method.upper(), line])
     except Exception as e:
-        loggers['console'].debug([con.host, con.ip, "PS1 Execute", str(e)])
+        loggers['console'].debug([con.host, con.ip, args.exec_method.upper(), str(e)])
 
 @requires_admin
 def extract_sam(con, args, target, loggers):
@@ -134,12 +128,26 @@ def wmi_query(con, args, target, loggers):
     loggers[args.mode].info("WMI Query\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, args.wmi_query))
     q.wmi_query(args.wmi_namespace, args.wmi_query)
 
+@requires_admin
+def get_netlocalgroups(con, args, target, loggers):
+    q = WmiCon(args, loggers, con.ip, con.host)
+    loggers[args.mode].info("WMI Query\t{}\t{}\\{}\tEnumerate Local Groups".format(target, args.domain, args.user))
+    q.get_netlocalgroups()
+
+@requires_admin
+def localgroup_members(smb_obj, args, target, loggers):
+    q = WmiCon(args, loggers, smb_obj.ip, smb_obj.host)
+    loggers[args.mode].info("WMI Query\t{}\t{}\\{}\tEnumerate Local Groups".format(target, args.domain, args.user))
+    q.get_localgroup_members(smb_obj.con.getServerName(), args.local_members)
 
 def execute_module(con, args, target, loggers, config_obj):
+    if args.exec_method.lower() == "winrm" and args.module != "test_execution":
+        loggers['console'].warning([con.host, con.ip, args.module.upper(), "WINRM Cannot be used for module execution outside of 'test_execution'"])
+        return
     try:
         module_class = get_module_class(args.module)
         class_obj = module_class()
-        populate_mod_args(class_obj, args.module_args, args.debug, loggers['console'])
+        populate_mod_args(class_obj, args.module_args, loggers['console'])
         loggers[args.mode].info("Module Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, args.module))
         class_obj.run(target, args, con, loggers, config_obj)
     except Exception as e:
@@ -163,7 +171,7 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
         if args.share:
             shares = args.share.split(",")
             for share in shares:
-                loggers['console'].info([con.host, con.ip, "USER_SHARES", "\\\\{}\\{}".format(con.host, share)])
+                loggers['console'].info([con.host, con.ip, "SHAREFINDER", "\\\\{}\\{}".format(con.host, share)])
 
         elif args.sharefinder or args.spider:
             shares = share_finder(con, args, loggers, target)
@@ -183,10 +191,14 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
             active_sessions(con, args, target, loggers)
         if args.list_processes:
             tasklist(con, args, loggers)
+        if args.local_groups:
+            get_netlocalgroups(con, args, target, loggers)
+        if args.local_members:
+            localgroup_members(con, args, target, loggers)
         if args.wmi_query:
             wmi_query(con, args, target, loggers)
         if args.execute:
-            code_execution(con, args, target, loggers, config_obj)
+            code_execution(con, args, target, loggers, config_obj, args.execute)
         if args.ps_execute:
             ps_execution(con, args, target, loggers, config_obj)
         if args.module:

@@ -1,46 +1,15 @@
 from impacket.ldap import ldap
-from ar3.helpers.misc import get_ip
+from ar3.core.connector import Connector
 from ar3.core.ldap.query import QUERIES, ATTRIBUTES
 
-class LdapCon():
-    def __init__(self, user, password, hashes, domain, host, timeout):
-        self.timeout = timeout
+class LdapCon(Connector):
+    def __init__(self, args, loggers, host, db):
+        Connector.__init__(self, args, loggers, host)
         self.ldaps = False
         self.con   = None
         self.data  = {}
-
-        self.host    = host
-        self.domain  = domain
-
-        self.username   = user
-        self.password   = password
-        self.hash       = hashes
-        self.lm         = ''
-        self.nt         = ''
         self.set_baseDN()
-
-        if self.hash:
-            try:
-                self.lm, self.nt = self.hash.split(':')
-            except:
-                self.nt = self.hash
-
-        """Messy but fixes connection issues when no host provided
-           @TODO cleanup! """
-        if not self.host:
-            try:
-                self.host = get_ip(self.domain)
-            except:
-                self.host = self.domain
-
-        try:
-            self.ip = get_ip(self.host)
-        except:
-            self.ip = self.host
-
-
-
-
+        self.db = db
     ##################################################
     # Ldap Connection & Authentication
     ##################################################
@@ -48,7 +17,8 @@ class LdapCon():
         if self.ldap_connection():
             try:
                 self.con._socket.settimeout(self.timeout)
-                self.con.login(self.username, self.password, self.domain, lmhash=self.lm, nthash=self.nt)
+                self.con.login(self.username, self.password, self.domain, lmhash=self.lmhash, nthash=self.nthash)
+                self.db.update_user(self.username, self.password, self.domain, self.hash)
             except Exception as e:
                 raise Exception(str(e))
         else:
@@ -79,7 +49,7 @@ class LdapCon():
             return False
 
     ##################################################
-    # Ldap Query Function
+    # Ldap Query Functions
     ##################################################
     def set_baseDN(self):
         self.baseDN = ''
@@ -113,11 +83,11 @@ class LdapCon():
             ATTRIBUTES['users'] = ATTRIBUTES['users'] + attrs
 
         search = QUERIES['users_active']
-        if query == 'all':
+        if query == '{all}':
             search = QUERIES['users_all']
         elif '@' in query:
             search = QUERIES['users_email_search'].format(query.lower())
-        elif query and query not in ['active', 'Active']:
+        elif query and query not in ['active', 'Active', '{active}']:
             search = QUERIES['users_account_search'].format(query.lower())
 
         return self.ldap_query(search, ATTRIBUTES['users'], self.generic_parser)
@@ -125,7 +95,11 @@ class LdapCon():
     def computer_query(self, query, attrs):
         if attrs:
             ATTRIBUTES['cpu'] = ATTRIBUTES['cpu'] + attrs
-        self.ldap_query(QUERIES['cpu_all'], ATTRIBUTES['cpu'], self.generic_parser)
+
+        if query and query != 'eol':
+            self.ldap_query(QUERIES['cpu_search'].format(query), ATTRIBUTES['cpu'], self.generic_parser)
+        else:
+            self.ldap_query(QUERIES['cpu_all'], ATTRIBUTES['cpu'], self.generic_parser)
 
         if query == "eol":
             self.data = self.eol_filter(self.data)
@@ -194,10 +168,8 @@ class LdapCon():
 
             self.categorize(tmp)
             del (tmp)
-        except Exception as e:
+        except:
             pass
-            #if "list indices must" not in str(e):
-                #raise Exception(e)
 
     def group_membership_parser(self, resp):
         try:

@@ -56,7 +56,51 @@ class WmiCon(Connector):
                     break
         self.disconnect()
 
-    def wmi_query(self,namespace, query):
+    def get_netlocalgroups(self):
+        self.create_wmi_con('root\\cimv2')
+        query = 'Select Name from win32_group'
+        wmi_query = self.wmi_con.ExecQuery(query, lFlags=WBEM_FLAG_FORWARD_ONLY)
+        while True:
+            try:
+                wmi_results = wmi_query.Next(0xffffffff, 1)[0]
+                wmi_results = wmi_results.getProperties()
+                for key,value in wmi_results.items():
+                    self.logger.info([self.display_host, self.display_ip, "LOCAL GROUPS", value['value']])
+            except Exception as e:
+                if str(e).find('S_FALSE') < 0:
+                    self.logger.debug([self.display_host, self.display_ip, "LOCAL GROUPS", str(e)])
+                else:
+                    break
+        self.disconnect()
+
+    def get_localgroup_members(self, domain, group):
+        self.create_wmi_con('root\\cimv2')
+        query = "SELECT PartComponent FROM Win32_GroupUser WHERE GroupComponent=\"Win32_Group.Domain='{}',Name='{}'\"".format(domain, group)
+        wmi_query = self.wmi_con.ExecQuery(query, lFlags=WBEM_FLAG_FORWARD_ONLY)
+        while True:
+            try:
+                wmi_results = wmi_query.Next(0xffffffff, 1)[0]
+                wmi_results = wmi_results.getProperties()
+                for key,value in wmi_results.items():
+                    member = self.parse_local_members(value['value'])
+                    self.logger.info([self.display_host, self.display_ip, "LOCAL MEMBERS", "{:<30} {}".format(group.title(), member)])
+            except Exception as e:
+                if str(e).find('S_FALSE') < 0:
+                    self.logger.debug([self.display_host, self.display_ip, "LOCAL MEMBERS", str(e)])
+                else:
+                    break
+        self.disconnect()
+
+    def parse_local_members(self, line):
+        # Parse domain\account_name from wmi output query
+        try:
+            data = line.split('.')[1]
+            domain, account = data.split(',')
+            return "{}\\{}".format(domain.split("=")[1].strip("\""), account.split("=")[1].strip("\""))
+        except:
+            return line
+
+    def wmi_query(self,namespace, query, name="WMI QUERY"):
         self.create_wmi_con(namespace)
         wmi_query = self.wmi_con.ExecQuery(query, lFlags=WBEM_FLAG_FORWARD_ONLY)
         while True:
@@ -64,7 +108,7 @@ class WmiCon(Connector):
                 wmi_results = wmi_query.Next(0xffffffff, 1)[0]
                 wmi_results = wmi_results.getProperties()
                 for k,v in wmi_results.items():
-                    self.logger.info([self.display_host, self.display_ip, 'WMI QUERY', "{:<30} {}".format(k, v['value'])])
+                    self.logger.info([self.display_host, self.display_ip, name, "{:<30} {}".format(k, v['value'])])
 
             except Exception as e:
                 if str(e).find('S_FALSE') < 0:

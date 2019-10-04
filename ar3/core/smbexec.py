@@ -16,7 +16,6 @@ class SMBEXEC():
         self.__rpctransport = None
         self.__scmr         = None
         self.__conn         = None
-        self.__output       = None
         self.__shell        = '%COMSPEC% /Q /c '
         # self.__mode       = mode
         # self.__aesKey     = aesKey
@@ -79,12 +78,9 @@ class SMBEXEC():
         resp = scmr.hROpenSCManagerW(self.__scmr)
         self.__scHandle = resp['lpScHandle']
 
-    def output_callback(self, data):
-        self._outputBuffer += data
-
     def execute(self, command):
         # Init New Command
-        self._outputBuffer = ''
+        self.__outputBuffer = ''
         if self.noOutput:
             cmd = self.__shell + command
         else:
@@ -95,7 +91,7 @@ class SMBEXEC():
         self.logger.debug("Creating {} to execute command".format(self.batchFile))
         if self.fileless_output:
             # Create bat service on AR3 server share
-            with open(os.path.join('/tmp', '.ar3', 'smb', self.batchFile), 'w') as batch_file:
+            with open(os.path.join('/tmp', '.ar3', self.batchFile), 'w') as batch_file:
                 batch_file.write(cmd)
         else:
             # Create .bat service on target system in /Windows/Temp to execute command
@@ -128,14 +124,10 @@ class SMBEXEC():
 
         # Get output
         if self.noOutput:
-            self._outputBuffer = "Command executed with no output"
-
+            self.__outputBuffer = "Command executed with no output"
         elif self.fileless_output:
-            sleep(self.timeout)
             self.get_output_fileless()
-
         else:
-            sleep(self.timeout)
             self.get_output()
             # Delete tmp files on system
             self.logger.debug('Removing: {}'.format(self.outfile))
@@ -146,14 +138,14 @@ class SMBEXEC():
 
         # Cleanup and return data
         self.finish()
-        return self._outputBuffer
+        return self.__outputBuffer
 
     def get_output(self, CODEC='UTF-8'):
         def output_callback(data):
             try:
-                self._outputBuffer += data.decode(CODEC)
+                self.__outputBuffer += data.decode(CODEC)
             except UnicodeDecodeError:
-                self._outputBuffer += data.decode(CODEC, errors='replace')
+                self.__outputBuffer += data.decode(CODEC, errors='replace')
 
         while True:
             try:
@@ -171,10 +163,12 @@ class SMBEXEC():
                     return self.get_output()
 
     def get_output_fileless(self):
+        def output_callback_fileless(data):
+            self.__outputBuffer += data
         while True:
             try:
-                with open(os.path.join('/tmp', '.ar3', 'smb', self.outfile), 'r') as output:
-                    self.output_callback(output.read())
+                with open(os.path.join('/tmp', '.ar3', self.outfile), 'r') as output:
+                    output_callback_fileless(output.read())
                 break
             except IOError:
                 sleep(2)

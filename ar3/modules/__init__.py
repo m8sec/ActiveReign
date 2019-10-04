@@ -17,6 +17,7 @@ MODULES = {
     'get_netdomaincontroller' : {'Class' : 'GetNetDomainController'},
     'get_lockedaccounts'      : {'Class' : 'GetLockedAccounts'},
     'wifi_passwords'          : {'Class' : 'WifiPasswords'},
+    'gpp_password'            : {'Class' : 'GPP_Password'},
 
     'mimikatz'                : {'Class' : 'InvokeMimikatz',
                                  'File'  : 'Invoke-Mimikatz.ps1',
@@ -29,6 +30,10 @@ MODULES = {
     'invoke_kerberoast'       : {'Class' : 'InvokeKerberoast',
                                  'File'  : 'Invoke-Kerberoast.ps1',
                                  'URL'   : 'https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/credentials/Invoke-Kerberoast.ps1'},
+
+    'invoke_vnc'              : {'Class' : 'InvokeVNC',
+                                 'File'  : 'Invoke-Vnc.ps1',
+                                 'URL'   : 'https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/management/Invoke-Vnc.ps1'},
 }
 
 def list_modules():
@@ -42,7 +47,7 @@ def list_modules():
         for x in class_obj.args.keys():
             print('\033[1;30m{:32}   |_{}= {} (Required: {})\033[1;m'.format(' ',x, class_obj.args[x]['Description'], class_obj.args[x]['Required']))
 
-def populate_mod_args(class_obj, module_args, debug_arg, logger):
+def populate_mod_args(class_obj, module_args, logger):
     # -o 'SERVER=192.168.1.1,PROCESS=cmd.exe'
     arg_split = module_args.strip().split(',')
 
@@ -51,9 +56,10 @@ def populate_mod_args(class_obj, module_args, debug_arg, logger):
         if x:
             try:
                 arg, value = x.split("=")
-                class_obj.args[arg]['Value'] = value
+                class_obj.args[arg.upper()]['Value'] = value
             except:
-                logger.debug(debug_arg, "Unable to process arg: \"{}\"".format(x))
+                logger.fail("Unable to process arg: \"{}\"".format(x))
+                exit(1)
 
         # Check for required arg
         for arg, data in class_obj.args.items():

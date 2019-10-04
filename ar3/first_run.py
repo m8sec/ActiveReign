@@ -1,13 +1,12 @@
-# credit: https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/first_run.py
 import os
+import sys
 from shutil import copyfile
-from subprocess import check_output, PIPE
 
 from ar3.ops.db.db_core import Ar3db
 from ar3.modules import get_module_resources
 
 def first_run_check(logger):
-    if not os.path.exists(os.path.join(os.path.expanduser('~'), '.ar3')):
+    if not os.path.exists(os.path.join(os.path.expanduser('~'), '.ar3')) or "--refresh" in sys.argv:
         first_run(logger)
 
 def first_run(logger):
@@ -29,17 +28,6 @@ def first_run(logger):
 
     logger.status("Cloning default config file to ~/.ar3/config.json")
     copyfile('ar3/config.json',LOG_DIR + "/config.json")
-
-    logger.status('Generating cert files')
-    try:
-        check_output(['openssl', 'help'], stderr=PIPE)
-        path = '{}/certs/'.format(LOG_DIR)
-        os.system('openssl req -new -x509 -keyout {} -out {} -days 365 -nodes -subj "/C=US" > /dev/null 2>&1'.format(path+'key.pem', path+'cert.pem'))
-    except OSError as e:
-        if e.errno == os.errno.ENOENT:
-            logger.fail('OpenSSL command line utility is not installed, could not generate certificate')
-        else:
-            logger.fail('Error while generating SSL certificate: {}'.format(e))
 
     logger.status("Initial setup complete! Thank you <3")
 

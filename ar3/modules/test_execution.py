@@ -1,8 +1,6 @@
-from os import _exit
-import logging
 from threading import Thread
-
 from ar3.logger import highlight
+from ar3.core.winrm import WINRM
 from ar3.core.wmiexec import WMIEXEC
 from ar3.core.smbexec import SMBEXEC
 from ar3.servers.smb import SMBServer
@@ -33,15 +31,19 @@ class TestExecution():
         self.exec_method = {
             WMIEXEC  : {'Name'      : 'WMIEXEC',
                         'Fileless'  : '\033[1;31mFAILED\033[0m',
-                        'Remote'     : '\033[1;31mFAILED\033[0m'
+                        'Remote'    : '\033[1;31mFAILED\033[0m'
                         },
 
             SMBEXEC  : {'Name'      : 'SMBEXEC',
                         'Fileless'  : '\033[1;31mFAILED\033[0m',
-                        'Remote'     : '\033[1;31mFAILED\033[0m'
-                        }
+                        'Remote'    : '\033[1;31mFAILED\033[0m'
+                        },
+            WINRM   :  {'Name'      : 'WINRM',
+                        'Fileless'  : '\033[1;33mN/A\033[0m',
+                        'Remote'    : '\033[1;31mFAILED\033[0m'
+                       }
                     }
-        # Defile filed/fileless via share
+        # Define remote/fileless via share
         self.exec_type = {
             'Remote'     : '',
             'Fileless'  : gen_random_string()

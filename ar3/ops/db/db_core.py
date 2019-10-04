@@ -3,8 +3,11 @@ from os import remove, path
 
 class Ar3db():
     __sql_create_domains = ('CREATE TABLE IF NOT EXISTS DOMAINS (DOMAINID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                            'DOMAIN TEXT NOT NULL,'
-                            'LOCKOUT_THRESHOLD INTEGER);')
+                            'NAME TEXT NOT NULL,'
+                            'LOCKOUT_THRESHOLD INTEGER,'
+                            'LOCKOUT_DURATION TEXT,'
+                            'MIN_PWD_LENGTH INTEGER,'
+                            'MAX_PWD_AGE TEXT);')
 
     __sql_create_hosts = ('CREATE TABLE IF NOT EXISTS HOSTS (HOSTID INTEGER PRIMARY KEY AUTOINCREMENT,'
                           'HOSTNAME TEXT,'
@@ -19,9 +22,21 @@ class Ar3db():
                           'DOMAIN TEXT,'
                           'HASH TEXT);')
 
-    __sql_create_admin = ('CREATE TABLE IF NOT EXISTS ADMIN (ADMINID INTEGER PRIMARY KEY AUTOINCREMENT,'
+    __sql_create_admin = ('CREATE TABLE IF NOT EXISTS ADMINS (ADMINID INTEGER PRIMARY KEY AUTOINCREMENT,'
                           'HOSTID INTEGER NOT NULL,'
                           'USERID INTEGER NOT NULL);')
+
+    __sql_create_groups = ('CREATE TABLE IF NOT EXISTS GROUPS (GROUPID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                           'DOMAIN TEXT,'
+                           'NAME TEXT NOT NULL);')
+
+    __sql_create_user_members = ('CREATE TABLE IF NOT EXISTS MEMBERS_USERS (MEMBERID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                  'GROUPID INTEGER NOT NULL,'
+                                  'USERID INTEGER NOT NULL);')
+
+    __sql_create_group_members = ('CREATE TABLE IF NOT EXISTS MEMBERS_GROUPS (MEMBERID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                  'GROUPID INTEGER NOT NULL,'
+                                  'GMID INTEGER NOT NULL);')
 
     def __init__(self, workspace, logger, debug=False):
         self.logger = logger
@@ -29,6 +44,9 @@ class Ar3db():
         self.db_dir = path.join(path.expanduser('~'), '.ar3', 'workspaces', workspace)
         self.dbname = path.join(self.db_dir, 'ar3.db')
 
+    ###########################
+    # DB connection/interaction
+    ###########################
     def db_connect(self, dbname):
         try:
             return connect(dbname, timeout=3, check_same_thread=False)
@@ -43,9 +61,13 @@ class Ar3db():
             self.db_exec(con, self.__sql_create_hosts)
             self.db_exec(con, self.__sql_create_users)
             self.db_exec(con, self.__sql_create_admin)
+            self.db_exec(con, self.__sql_create_groups)
+            self.db_exec(con, self.__sql_create_user_members)
+            self.db_exec(con, self.__sql_create_group_members)
             con.close()
             return True
         except Exception as e:
+            print(e)
             self.logger.debug(str(e))
             return False
 
@@ -57,19 +79,26 @@ class Ar3db():
         cur.close()
         return data
 
-    def db_delete(self):
+    def db_rebuild(self):
         try:
-            remove(self.dbname)
+            self.db_remove()
+            self.db_init()
             return True
         except:
             return False
 
+    def db_remove(self):
+        remove(self.dbname)
+
     def close(self,con):
         con.close()
 
+    ###########################
+    # Retrieve ID #
+    ###########################
     def domain_id(self, con, domain):
         try:
-            return self.db_exec(con, """SELECT DOMAINID FROM DOMAINS WHERE DOMAIN='{}' LIMIT 1;""".format(domain))[0][0]
+            return self.db_exec(con, """SELECT DOMAINID FROM DOMAINS WHERE NAME='{}' LIMIT 1;""".format(domain))[0][0]
         except:
             return False
 
@@ -85,13 +114,32 @@ class Ar3db():
         except:
             return False
 
+    def group_id(self, con, group_name, domain):
+        try:
+            return self.db_exec(con, """SELECT GROUPID FROM GROUPS WHERE NAME='{}' AND DOMAIN='{}' LIMIT 1;""".format(group_name, domain))[0][0]
+        except:
+            return False
+
+    ###########################
+    # Update records
+    ###########################
     def update_domain(self, domain, lockout_threshold):
         con = self.db_connect(self.dbname)
         id = self.domain_id(con, domain)
         if id:
-            self.db_exec(con, """UPDATE DOMAINS SET DOMAIN='{}', LOCKOUT_THRESHOLD='{}' WHERE DOMAINID={};""".format(domain, lockout_threshold, id))
+            self.db_exec(con, """UPDATE DOMAINS SET NAME='{}', LOCKOUT_THRESHOLD='{}' WHERE DOMAINID={};""".format(domain, lockout_threshold, id))
         else:
-            self.db_exec(con, """INSERT INTO DOMAINS (DOMAIN, LOCKOUT_THRESHOLD) VALUES ('{}','{}');""".format(domain, lockout_threshold))
+            self.db_exec(con, """INSERT INTO DOMAINS (NAME, LOCKOUT_THRESHOLD) VALUES ('{}','{}');""".format(domain, lockout_threshold))
+        con.close()
+
+    def update_domain_ldap(self, domain, threshold, duration, length, age):
+        # Update all values in domain policy
+        con = self.db_connect(self.dbname)
+        id = self.domain_id(con, domain)
+        if id:
+            self.db_exec(con, """UPDATE DOMAINS SET NAME='{}', LOCKOUT_THRESHOLD='{}', LOCKOUT_DURATION='{}', MIN_PWD_LENGTH='{}', MAX_PWD_AGE='{}' WHERE DOMAINID={};""".format(domain, threshold, duration, length, age, id))
+        else:
+            self.db_exec(con, """INSERT INTO DOMAINS (NAME, LOCKOUT_THRESHOLD, LOCKOUT_DURATION, MIN_PWD_LENGTH, MAX_PWD_AGE) VALUES ('{}','{}','{}','{}','{}');""".format(domain, threshold, duration, length, age))
         con.close()
 
     def update_host(self, hostname, ip, domain, os, signing):
@@ -103,6 +151,17 @@ class Ar3db():
             self.db_exec(con, """INSERT OR REPLACE INTO HOSTS(HOSTNAME, IP, DOMAIN, OS, signing) VALUES ('{}','{}','{}','{}', '{}');""".format(hostname, ip, domain, os, signing))
         con.close()
 
+    def update_host_ldap(self, hostname, ip, domain, os):
+        # Update host using ldap information
+        con = self.db_connect(self.dbname)
+        id = self.host_id(con, hostname)
+        if id:
+            self.db_exec(con,"""UPDATE HOSTS SET HOSTNAME='{}', IP='{}', DOMAIN='{}', OS='{}' WHERE HOSTID={};""".format(hostname, ip, domain, os, id))
+        else:
+            self.db_exec(con, """INSERT OR REPLACE INTO HOSTS(HOSTNAME, IP, DOMAIN, OS) VALUES ('{}','{}','{}','{}');""".format(hostname, ip, domain, os))
+        con.close()
+
+
     def update_user(self, username, passwd, domain, hash):
         con = self.db_connect(self.dbname)
         id = self.user_id(con, username, domain)
@@ -112,13 +171,54 @@ class Ar3db():
             self.db_exec(con,"""INSERT INTO USERS (USERNAME, PASSWORD, DOMAIN, HASH) VALUES ('{}','{}','{}','{}');""".format(username, passwd, domain, hash))
         con.close()
 
+    def update_username(self, domain, username):
+        # Update username and domain values without effecting password/hash values
+        con = self.db_connect(self.dbname)
+        uid = self.user_id(con, username, domain)
+        if uid:
+            self.db_exec(con, """UPDATE USERS SET USERNAME='{}', DOMAIN='{}' WHERE USERID={};""".format(username, domain, uid))
+        else:
+            self.db_exec(con, """INSERT INTO USERS (USERNAME, DOMAIN) VALUES ('{}','{}');""".format(username, domain))
+        con.close()
+
+    def update_user_members(self, domain, username, group_name):
+        con = self.db_connect(self.dbname)
+        uid = self.user_id(con, username, domain)
+        gid = self.group_id(con, group_name, domain)
+        self.db_exec(con, """INSERT INTO MEMBERS_USERS (GROUPID, USERID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT MEMBERID FROM MEMBERS_USERS WHERE GROUPID={0} AND USERID={1});""".format(gid, uid))
+        con.close()
+
+    def update_group_members(self, domain, group_member, group_name):
+        con = self.db_connect(self.dbname)
+        gmid = self.group_id(con, group_member, domain)
+        gid = self.group_id(con, group_name, domain)
+        self.db_exec(con, """INSERT INTO MEMBERS_GROUPS (GROUPID, GMID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT MEMBERID FROM MEMBERS_GROUPS WHERE GROUPID={0} AND GMID={1});""".format(gid, gmid))
+        con.close()
+        return
+
+    def update_group(self, group_name, domain):
+        try:
+            group_name = group_name.replace("'", "").replace('"', "")
+            con = self.db_connect(self.dbname)
+            id = self.group_id(con, group_name, domain)
+            if id:
+                self.db_exec(con,"""UPDATE GROUPS SET DOMAIN='{}', NAME='{}' WHERE GROUPID={};""".format(domain, str(group_name), id))
+            else:
+                self.db_exec(con,"""INSERT INTO GROUPS (DOMAIN, NAME) VALUES ('{}','{}');""".format(domain, str(group_name)))
+            con.close()
+        except Exception as e:
+            self.logger.debug(['DB GROUPS', group_name, domain, str(e)])
+
     def update_admin(self, username, domain, hostname):
         con = self.db_connect(self.dbname)
         hid = self.host_id(con, hostname)
         uid = self.user_id(con, username, domain)
-        self.db_exec(con, """INSERT INTO ADMIN (USERID, HOSTID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT ADMINID FROM ADMIN WHERE USERID={0} AND HOSTID={1});""".format(uid, hid))
+        self.db_exec(con, """INSERT INTO ADMINS (USERID, HOSTID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT ADMINID FROM ADMINS WHERE USERID={0} AND HOSTID={1});""".format(uid, hid))
         con.close()
 
+    ###########################
+    # General queries
+    ###########################
     def query_domains(self):
         try:
             con = self.db_connect(self.dbname)
@@ -129,10 +229,20 @@ class Ar3db():
             self.logger.debug(str(e))
             return [[]]
 
+    def query_groups(self):
+        try:
+            con = self.db_connect(self.dbname)
+            tmp = self.db_exec(con, """SELECT GROUPS.GROUPID, GROUPS.DOMAIN, GROUPS.NAME, (SELECT (COUNT(MEMBERS_USERS.USERID)|| ' User(s)') FROM MEMBERS_USERS WHERE MEMBERS_USERS.GROUPID = GROUPS.GROUPID), (SELECT (COUNT(MEMBERS_GROUPS.GMID)|| ' Group(s)') FROM MEMBERS_GROUPS WHERE MEMBERS_GROUPS.GROUPID = GROUPS.GROUPID) FROM GROUPS ORDER BY GROUPS.NAME;""")
+            con.close()
+            return tmp
+        except Exception as e:
+            self.logger.debug(str(e))
+            return [[]]
+
     def query_hosts(self):
         try:
             con = self.db_connect(self.dbname)
-            tmp = self.db_exec(con, """SELECT HOSTS.HOSTID, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.DOMAIN, HOSTS.OS, HOSTS.SIGNING, (SELECT (COUNT(ADMIN.USERID) || ' User(s)') FROM ADMIN WHERE ADMIN.HOSTID = HOSTS.HOSTID) FROM HOSTS;""")
+            tmp = self.db_exec(con, """SELECT HOSTS.HOSTID, HOSTS.DOMAIN, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.OS, HOSTS.SIGNING, (SELECT (COUNT(ADMINS.USERID) || ' User(s)') FROM ADMINS WHERE ADMINS.HOSTID = HOSTS.HOSTID) FROM HOSTS;""")
             con.close()
             return tmp
         except Exception as e:
@@ -142,33 +252,49 @@ class Ar3db():
     def query_users(self):
         try:
             con = self.db_connect(self.dbname)
-            tmp = self.db_exec(con, """SELECT USERS.USERID, USERS.USERNAME, USERS.PASSWORD, USERS.HASH, USERS.DOMAIN, (SELECT (COUNT(ADMIN.HOSTID) || ' Host(s)') FROM ADMIN WHERE ADMIN.USERID = USERS.USERID) FROM USERS;""")
+            tmp = self.db_exec(con, """SELECT USERS.USERID, USERS.DOMAIN, USERS.USERNAME, USERS.PASSWORD, USERS.HASH, (SELECT (COUNT(ADMINS.HOSTID) || ' Host(s)') FROM ADMINS WHERE ADMINS.USERID = USERS.USERID), (SELECT (COUNT(MEMBERS_USERS.GROUPID) || ' Groups(s)') FROM MEMBERS_USERS WHERE MEMBERS_USERS.USERID = USERS.USERID) FROM USERS ORDER BY USERS.USERNAME;""")
             con.close()
             return tmp
         except Exception as e:
             self.logger.debug(str(e))
             return [[]]
 
-    def query_specific_user(self, userid):
+    def query_creds(self):
         try:
             con = self.db_connect(self.dbname)
-            tmp = self.db_exec(con, """SELECT USERS.USERID, USERS.USERNAME, USERS.PASSWORD, USERS.HASH, USERS.DOMAIN, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.OS FROM USERS INNER JOIN ADMIN ON USERS.USERID = ADMIN.USERID INNER JOIN HOSTS ON ADMIN.HOSTID = HOSTS.HOSTID WHERE USERS.USERID = '{}';""".format(userid))
+            tmp = self.db_exec(con, """SELECT USERS.USERID, USERS.DOMAIN, USERS.USERNAME, USERS.PASSWORD, USERS.HASH, (SELECT (COUNT(ADMINS.HOSTID) || ' Host(s)') FROM ADMINS WHERE ADMINS.USERID = USERS.USERID) FROM USERS WHERE USERS.hash iS NOT NULL OR USERS.PASSWORD IS NOT NULL;""")
             con.close()
             return tmp
         except Exception as e:
             self.logger.debug(str(e))
             return [[]]
 
-    def query_specific_host(self, hostid):
+    ###########################
+    # Query specific value
+    ###########################
+    def custom_query(self, sql):
         try:
             con = self.db_connect(self.dbname)
-            tmp = self.db_exec(con, """SELECT HOSTS.HOSTID, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.DOMAIN, HOSTS.OS, HOSTS.SIGNING, USERS.USERNAME FROM HOSTS INNER JOIN ADMIN ON HOSTS.HOSTID = ADMIN.HOSTID INNER JOIN USERS ON USERS.USERID = ADMIN.USERID WHERE HOSTS.HOSTID = '{}';""".format(hostid))
+            tmp = self.db_exec(con, sql)
             con.close()
             return tmp
         except Exception as e:
             self.logger.debug(str(e))
             return [[]]
 
+    def query_spec_host(self, hostid):
+        try:
+            con = self.db_connect(self.dbname)
+            tmp = self.db_exec(con, """SELECT HOSTS.HOSTID, HOSTS.DOMAIN, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.OS, HOSTS.SIGNING, USERS.USERNAME, USERS.DOMAIN, USERS.PASSWORD, USERS.HASH FROM HOSTS INNER JOIN ADMINS ON HOSTS.HOSTID = ADMINS.HOSTID INNER JOIN USERS ON USERS.USERID = ADMINS.USERID WHERE HOSTS.HOSTID = '{}';""".format(hostid))
+            con.close()
+            return tmp
+        except Exception as e:
+            self.logger.debug(str(e))
+            return [[]]
+
+    ###############################
+    # Extract value for use in Enum
+    ###############################
     def extract_user(self, userid):
         # Used to extract creds from db for enumeration
         try:
@@ -188,6 +314,3 @@ class Ar3db():
             return tmp
         except Exception as e:
             return False
-
-    def del_db(self):
-        remove(self.dbname)

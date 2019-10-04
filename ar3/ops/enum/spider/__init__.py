@@ -3,7 +3,6 @@ from os import _exit
 from time import sleep
 from datetime import datetime, timedelta
 
-from ar3.logger import highlight
 from ar3.ops.enum.file_parser import ParserThread
 from ar3.ops.enum.spider.file_search import SearchThread
 
@@ -12,18 +11,15 @@ def spider(args, config_obj, loggers, db_obj, target, share):
     outside the config files black list parameters. Then the ParseThread
     is launched to parse files and ID potentially sensitive information'''
 
-    loggers['console'].status(["Launching Spider","\\\\{}\\{}{}".format(target, share, args.start_path.replace("/","\\"))])
-    loggers['spider'].info("Spidering Directory\t\\\\{}\\{}{}".format(target, share, args.start_path.replace("/","\\")))
-
     search_thread = SearchThread(args, config_obj, loggers, db_obj, target, share)
     search_thread.daemon = True
     search_thread.start()
     sleep(args.timeout)
 
+    # Launch ParserThread class to discovery data in files
     active_threads = []
     while search_thread.file_queue:
         try:
-            # Launch ParserThread class to discovery data in files
             d = {}
             d['start_time'] = datetime.now()
             d['thread'] = ParserThread(config_obj, db_obj, args, loggers, search_thread.file_queue[0])

@@ -1,5 +1,6 @@
 import re
 import socket
+from os import path
 from requests import post
 from random import choice
 from base64 import b64encode
@@ -54,3 +55,9 @@ def validate_ntlm(data):
         return True
     else:
         return False
+
+def file_exists(parser, filename):
+    # Used with argparse to check if input files exists
+    if not path.exists(filename):
+        parser.error("Input file not found: {}".format(filename))
+    return [x.strip() for x in open(filename)]

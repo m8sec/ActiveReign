@@ -1,6 +1,7 @@
 import os
 
 from ar3.core.smb import SmbCon
+from ar3.core.winrm import WINRM
 from ar3.core.smbexec import SMBEXEC
 from ar3.core.wmiexec import WMIEXEC
 from ar3.servers.smb import SMBServer
@@ -118,11 +119,14 @@ class AR3Shell(Connector):
 
     def cmd_execution(self, cmd):
         self.filer.info("Command Execution\t{}\t{}\\{}\t{}".format(self.host, self.smbcon.ip, self.username, cmd))
-        if self.exec_method == 'wmiexec':
+        if self.exec_method.lower() == 'wmiexec':
             self.executioner = WMIEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
 
-        elif self.exec_method == 'smbexec':
+        elif self.exec_method.lower() == 'smbexec':
             self.executioner = SMBEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
+
+        elif self.exec_method.lower() == 'winrm':
+            self.executioner = WINRM(self.logger, self.host, self.args, self.smbcon)
 
         self.output = self.executioner.execute(cmd).splitlines()
 

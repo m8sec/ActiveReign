@@ -138,20 +138,22 @@ class ParserThread(threading.Thread):
         return False
 
     def reporter(self, search, search_detail, line_num, line_detail):
-        results = ''
-        # Function to write all parsed data to file using output object or display in terminal
-            # string.replace() for copy-paste in Windows Explorer
         full_path = "\\\\" + self.host + "\\" + self.share + self.path.replace("/", "\\") + self.filename
-        search_criteria = "{:<7} {:<8}".format(search,search_detail)
-
-        if line_num:
-            results = "(Line: {}) {}".format(line_num,line_detail.rstrip())
-
-        self.logger.success([self.host, self.ip, "SPIDER", full_path, search_criteria, results])
-        self.filer.info("Spider\t{}\t{}\t{}".format(search_criteria, full_path, results))
+        # Used for gpp_password module & decryption:
+        if search_detail == 'gpp_password':
+            from ar3.modules.gpp_password import cpassword_parser
+            cpassword_parser(self.loggers, self.host, self.ip, full_path, line_detail)
+        # Write spider results to terminal and log
+        else:
+            self.filer.info("Spider\t{}\t{}\t{}".format(search, full_path, line_detail))
+            line = "{:<10} : {}".format(search, full_path)
+            if line_num:
+                line += " (Line: {})".format(line_num)
+            self.logger.success([self.host, self.ip, "SPIDER", line])
+            if line_detail:
+                self.logger.success([self.host, self.ip, "SPIDER", "{:<10} : {}".format("Details", line_detail.strip())])
 
 def file_extension(filename):
-    # Extract file extension from given filename
     try:
         return filename.split('.')[-1].lower()
     except:

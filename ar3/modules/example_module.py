@@ -1,5 +1,3 @@
-from ar3.logger import highlight
-
 class ExampleModule():
     def __init__(self):
         self.name = 'Example Module'
@@ -29,8 +27,8 @@ class ExampleModule():
         smb_con - Active SMB Connection
         loggers - Dictionary of queues used to output data
           loggers['console'] - Write data to terminal
-          loggers['enum]     - Write data to log file enum.csv
+          loggers['enum']     - Write data to log file enum.csv
 
         Once Complete, Add the module to the _Modules dictionary in ar3.modules.__init__.py
         """
-        loggers['console'].success([smb_con.host, smb_con.ip, highlight(self.name.upper()),"Example Module Output: {}".format(self.args['ARGUMENTS']['Value'])])
+        loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(),"Example Module Output: {}".format(self.args['ARGUMENTS']['Value'])])

@@ -12,7 +12,7 @@ from impacket import smbserver
 from impacket.ntlm import compute_lmhash, compute_nthash
 
 class SMBServer(threading.Thread):
-    def __init__(self, logger, share_name, share_path='/tmp/.ar3/smb', share_comment = '', username= '', password='', listen_address='0.0.0.0', listen_port=445, verbose=False):
+    def __init__(self, logger, share_name, share_path='/tmp/.ar3', share_comment = '', username= '', password='', listen_address='0.0.0.0', listen_port=445, verbose=False):
         self.running = True
         self._smb2support = False
         self._share_path = share_path

@@ -17,6 +17,6 @@ def parse_docx(regex, max_chars, max_size, timeout, con, share, path, filename):
             line_count += 1
         # Close file obj
         close_fileobj(file_obj)
-    except Exception as e:
+    except:
         pass
     return False

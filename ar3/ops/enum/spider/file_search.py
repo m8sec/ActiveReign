@@ -19,6 +19,11 @@ class SearchThread(threading.Thread):
         self.smbcon = SmbCon(args, loggers, target, db)
         self.smbcon.create_smb_con()
 
+        # Show kickoff messages on startup, if not args.spider startup is called from a module
+        if args.spider:
+            loggers['console'].info([self.smbcon.host, self.smbcon.ip, "SPIDER", "Scanning \\\\{}\\{}{}".format(target, share, args.start_path.replace("/", "\\"))])
+        loggers['spider'].info("Spider\t\\\\{}\\{}{}".format(target, share, args.start_path.replace("/", "\\")))
+
     def run(self):
         self.recursion(self.start_path)
         self.smbcon.close()
