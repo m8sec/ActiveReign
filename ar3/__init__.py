@@ -21,7 +21,7 @@ from ar3.ops.shell.arg_parser import shell_args, shell_arg_mods
 from ar3.logger import setup_logger,setup_file_logger,print_args
 
 def banner():
-    VERSION = "v1.0.0"
+    VERSION = "v1.0.1"
     BANNER = """  
 
                                    _____                  

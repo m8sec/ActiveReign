@@ -24,11 +24,9 @@ def enum_args(sub_parser):
     auth_pwd.add_argument('-p', dest='passwd', type=str, default='', help='Set password (Default=null)')
 
     auth.add_argument('-id', dest='cred_id', type=int, help='Use creds from db for ldap queries/enumeration')
-
-    auth_domain = auth.add_mutually_exclusive_group(required=False)
-    auth_domain.add_argument('-d', dest='domain', type=str, default='', help='Set domain (Default=null)')
-    auth_domain.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
-    enum_parser.add_argument('--threshold', dest='lockout_threshold', type=int, default=3,help='Domain/System Lockout Threshold ''(Exits 1 attempt before lockout)')
+    auth.add_argument('-d', dest='domain', type=str, default='', help='Set domain (Default=null)')
+    auth.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
+    auth.add_argument('--threshold', dest='lockout_threshold', type=int, default=3,help='Domain/System Lockout Threshold ''(Exits 1 attempt before lockout)')
 
     enum = enum_parser.add_argument_group("Enumerating Options")
     enum.add_argument('--pass-pol', dest="passpol", action='store_true', help="Enumerate password policy")
@@ -79,16 +77,20 @@ def enum_args(sub_parser):
     execution.add_argument('--no-output', dest='no_output', action='store_true', help='Execute command with no output')
     execution.add_argument('--slack', dest='slack', action='store_true',help='Send execution output to Slack (Config required)')
 
-    target = enum_parser.add_argument_group("Scanning Options")
-    target.add_argument('--ldap-srv', dest='ldap_srv', type=str, default='', help='Define LDAP server')
-    enum_parser.add_argument(dest='target', nargs='+', help='target.txt, 127.0.0.0/24, range, "ldap", "eol"')
+    target = enum_parser.add_argument_group("Target Options")
+    targets = target.add_mutually_exclusive_group(required=True)
+    targets.add_argument(dest='target', nargs='?', help='Positional argument, Accepts: target.txt, 127.0.0.0/24, ranges, 192.168.1.1')
+    targets.add_argument('--ldap', dest='ldap', action='store_true', help='Use LDAP to target all domain systems')
+    targets.add_argument('--eol', dest='eol', action='store_true', help='Use LDAP to target end-of-life systems on the domain')
+    target.add_argument('--ldap-srv', dest='ldap_srv', type=str, default='', help='Define LDAP server (Optional)')
 
 def enum_arg_mods(args, db_obj, loggers):
+    print(args)
     logger  = loggers['console']
     context = argparse.Namespace(
          mode       = args.mode,
          timeout    = args.timeout,
-         local_auth = args.local_auth,
+         local_auth = False,
          debug      = args.debug,
          user       = False,
          passwd     = False,
@@ -100,28 +102,28 @@ def enum_arg_mods(args, db_obj, loggers):
     if not args.passwd and args.user and not args.hash:
         args.passwd = getpass("Enter password, or continue with null-value: ")
 
-    # Cred ID present & no user/pass provided
+    # Cred ID present & no user/pass provided, for us in enumeration
     elif args.cred_id and not args.user:
         enum_user = db_obj.extract_user(args.cred_id)
-        context.user    = enum_user[0][0],
-        context.passwd  = enum_user[0][1],
-        context.hash    = enum_user[0][2],
-        context.domain  = enum_user[0][3],
+        args.user    = enum_user[0][0],
+        args.passwd  = enum_user[0][1],
+        args.hash    = enum_user[0][2],
+        args.domain  = enum_user[0][3],
 
     # Gather target systems using ldap
-    if args.target[0] in ['{ldap}', '{eol}']:
-        if args.cred_id and not context.user:
+    if args.ldap or args.eol:
+        if args.cred_id:
             ldap_user = db_obj.extract_user(args.cred_id)
-            context.user    = ldap_user[0][0],
-            context.passwd  = ldap_user[0][1],
-            context.hash    = ldap_user[0][2],
-            context.domain  = ldap_user[0][3],
+            context.user    = ldap_user[0][0]
+            context.passwd  = ldap_user[0][1]
+            context.hash    = ldap_user[0][2]
+            context.domain  = ldap_user[0][3]
 
-        elif args.domain:
-            context.user     = args.user
-            context.passwd   = args.passwd
-            context.hash     = args.hash
-            context.domain   = args.domain
+        elif args.domain and args.user:
+            context.user    = args.user
+            context.passwd  = args.passwd
+            context.hash    = args.hash
+            context.domain  = args.domain
 
         else:
             logger.warning("To use the LDAP feature, please select a valid credential ID or enter domain credentials")
@@ -141,10 +143,10 @@ def enum_arg_mods(args, db_obj, loggers):
                 exit(1)
             logger.status_success(['LDAP Connection', 'Connection established (server: {}) (LDAPS: {})'.format(l.host, l.ldaps)])
 
-            if args.target[0] == '{ldap}':
-                args.target = list(l.computer_query(False, False).keys())
-            elif args.target[0] == "{eol}":
-                args.target = list(l.computer_query('eol', False).keys())
+            if args.ldap:
+                args.target = list(l.computer_query(False, []).keys())
+            elif args.eol:
+                args.target = list(l.computer_query('eol', []).keys())
             logger.status_success(['LDAP Connection','{} computers collected'.format(len(args.target))])
 
         except Exception as e:
@@ -154,7 +156,7 @@ def enum_arg_mods(args, db_obj, loggers):
                 logger.fail(["LDAP Error", str(e)])
             exit(1)
     else:
-        args.target = ipparser(args.target[0])
+        args.target = ipparser(args.target)
 
     if "--threshold" not in argv:
         tmp = db_obj.extract_lockout(args.domain)

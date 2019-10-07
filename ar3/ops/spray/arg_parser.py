@@ -17,12 +17,15 @@ def spray_args(sub_parser):
     spray_parser.add_argument('-m', '--spray-method', dest="method", type=str, default='SMB', help="Spray Method {SMB, LDAP} (Default: SMB)")
 
     # User
-    sp_user = spray_parser.add_mutually_exclusive_group(required=True)
+    u = spray_parser.add_argument_group("User Options")
+    sp_user = u.add_mutually_exclusive_group(required=True)
     sp_user.add_argument('-u', dest='user', type=str, action='append', help='User to spray {account name, ldap}')
     sp_user.add_argument('-U', dest='user', default=False, type=lambda x: file_exists(sub_parser, x), help='User file to spray {Users.txt}')
+    sp_user.add_argument('--domain-users', '-du', dest='domain_users', action='store_true', help='Extract users from LDAP (domain password spray)')
 
     # Password
-    sp_pwd = spray_parser.add_mutually_exclusive_group()
+    p = spray_parser.add_argument_group("Password Options")
+    sp_pwd = p.add_mutually_exclusive_group()
     sp_pwd.add_argument('-p', dest='passwd', action='append', default=[], help='Single password')
     sp_pwd.add_argument('-P', dest='passwd', default='', type=lambda x: file_exists(sub_parser, x), help='Password file {pass.txt}')
     sp_pwd.add_argument('--user-as-pass', dest="user_as_pass", action='store_true', help="Set username as password")
@@ -30,20 +33,23 @@ def spray_args(sub_parser):
     sp_pwd.add_argument('-H','-hashes', dest='hash', type=str, default='', help='Use Hash for authentication')
 
     # Domain
-    #spray_domain = spray_parser.add_mutually_exclusive_group(required=False)
     spray_parser.add_argument('-d', dest='domain', type=str, default='', help='Set domain')
     spray_parser.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
 
     # Timing options
     spray_parser.add_argument('-j', dest='jitter', type=float, default=0, help='jitter (sec)')
-    spray_parser.add_argument('--ldap-srv', dest='ldap_srv', type=str, default='', help='Define LDAP server')
-    spray_parser.add_argument(dest='target', nargs='+', help='{target.txt, 127.0.0.0/24, range, ldap, eol}')
 
     # ldap Authentication to collect users and/or targets
-    spray_parser.add_argument('-id', dest='cred_id', type=int, help='Use user id from db for LDAP queries')
-    spray_parser.add_argument('--force-all', dest="force_all", action='store_true', help="Spray all users, regardless of BadPwd count")
-    spray_parser.add_argument('--threshold', dest='default_threshold', type=int, default=3, help='Set lockout threshold, if failed to aquire from domain (default: 3')
+    ldap = spray_parser.add_argument_group("LDAP Options")
+    ldap.add_argument('--force-all', dest="force_all", action='store_true', help="Spray all users, regardless of BadPwd count")
+    ldap.add_argument('--threshold', dest='default_threshold', type=int, default=3, help='Set lockout threshold, if failed to aquire from domain (default: 3')
 
+    target = spray_parser.add_argument_group("Target Options")
+    targets = target.add_mutually_exclusive_group(required=True)
+    targets.add_argument(dest='target', nargs='?', help='Positional argument, Accepts: target.txt, 127.0.0.0/24, ranges, 192.168.1.1')
+    targets.add_argument('--ldap', dest='ldap', action='store_true', help='Use LDAP to target all domain systems')
+    target.add_argument('--ldap-srv', dest='ldap_srv', type=str, default='', help='Define LDAP server (Optional)')
+    target.add_argument('-id', dest='cred_id', type=int, help='Extract creds from DB for LDAP connection')
 
 def spray_arg_mods(args, db_obj, loggers):
     logger = loggers['console']
@@ -55,11 +61,11 @@ def spray_arg_mods(args, db_obj, loggers):
         logger.warning('Cannot use LDAP spray method with local authentication')
         exit(0)
 
-    if args.target[0] != "{ldap}":
-        args.target = ipparser(args.target[0])
+    if not args.ldap:
+        args.target = ipparser(args.target)
 
 
-    if "{ldap}" in argv:
+    if args.ldap or args.domain_users:
         if not args.cred_id:
             logger.warning("To use this feature, please choose a cred id from the database")
             logger.warning("Insert credentials:\r\n     activereign db insert -u username -p Password123 -d domain.local")
@@ -71,7 +77,7 @@ def spray_arg_mods(args, db_obj, loggers):
             context = Namespace(
                 mode        = args.mode,
                 timeout     = args.timeout,
-                local_auth  = args.local_auth,
+                local_auth  = False,
                 debug       = args.debug,
                 user        = ldap_user[0][0],
                 passwd      = ldap_user[0][1],
@@ -86,10 +92,7 @@ def spray_arg_mods(args, db_obj, loggers):
 
             try:
                 # Define LDAP server to use for query
-                if args.user[0] == 'ldap' and args.target[0] not in ['ldap', 'eol']:
-                    l = LdapCon(context, loggers, args.target[0], db_obj)
-                else:
-                    l = LdapCon(context, loggers, args.ldap_srv, db_obj)
+                l = LdapCon(context, loggers, args.ldap_srv, db_obj)
                 l.create_ldap_con()
                 if not l:
                     logger.status_fail(['LDAP Connection', 'Unable to create LDAP connection'])
@@ -99,7 +102,7 @@ def spray_arg_mods(args, db_obj, loggers):
                 ########################################
                 # Get users via LDAP
                 ########################################
-                if args.user[0] == '{ldap}':
+                if args.domain_users:
                     tmp_users = l.user_query('active', False)
                     if args.force_all:
                         # Force spray on all users in domain - not recommended
@@ -144,7 +147,7 @@ def spray_arg_mods(args, db_obj, loggers):
                 ########################################
                 # get targets via ldap
                 ########################################
-                if args.target[0] == '{ldap}':
+                if args.ldap:
                     args.target = list(l.computer_query(False, False).keys())
                     logger.status_success('{} computers collected'.format(len(args.target)))
 

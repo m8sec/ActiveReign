@@ -1,7 +1,4 @@
-# Setup files
 impacket/*
-
-# Packaging
 develop-eggs/
 .Python
 env/
@@ -19,6 +16,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+test.py
 
 # Byte-compiled
 __pycache__/
