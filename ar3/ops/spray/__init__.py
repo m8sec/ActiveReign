@@ -12,7 +12,12 @@ from ar3.helpers.misc import get_timestamp
 def main(args, config_obj, db_obj, loggers):
 
     for passwd in args.passwd:
-        loggers['console'].info("\033[1;30mPerforming Password Spray @ {} [Users: {}] [Password: {}****] [Method: {}]\033[0m".format(get_timestamp(),len(args.user), passwd, args.method))
+        # Indicate start
+        if args.hash:
+            loggers['console'].info("\033[1;30mPerforming Password Spray @ {} [Users: {}] [Hash: True] [Method: {}]\033[0m".format(get_timestamp(), len(args.user), args.method))
+        else:
+            loggers['console'].info("\033[1;30mPerforming Password Spray @ {} [Users: {}] [Password: {}] [Method: {}]\033[0m".format(get_timestamp(),len(args.user), passwd, args.method))
+        # Start
         for target in args.target:
             for user in args.user:
 

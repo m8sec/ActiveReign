@@ -133,7 +133,7 @@ def enum_arg_mods(args, db_obj, loggers):
         if context.hash:
             logger.status(['LDAP Authentication', '{}\{} (Password: None) (Hash: True)'.format(context.domain, context.user)])
         else:
-            logger.status(['LDAP Authentication', '{}\{} (Password: {}*******) (Hash: False])'.format(context.domain, context.user, context.passwd[:1])])
+            logger.status(['LDAP Authentication', '{}\{} (Password: {}*******) (Hash: False)'.format(context.domain, context.user, context.passwd[:1])])
 
         try:
             l = LdapCon(context, loggers, args.ldap_srv, db_obj)

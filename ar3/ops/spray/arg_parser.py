@@ -1,8 +1,7 @@
-from sys import argv
 from ipparser import ipparser
 from argparse import Namespace
-from ar3.helpers.misc import file_exists
 
+from ar3.helpers.misc import file_exists
 from ar3.core.ldap import LdapCon
 
 
@@ -88,7 +87,7 @@ def spray_arg_mods(args, db_obj, loggers):
             if context.hash:
                 logger.status(['LDAP Authentication', '{}\{} (Password: None) (Hash: True)'.format(context.domain, context.user)])
             else:
-                logger.status(['LDAP Authentication','{}\{} (Password: {}*******) (Hash: False])'.format(context.domain, context.user, context.passwd[:1])])
+                logger.status(['LDAP Authentication','{}\{} (Password: {}*******) (Hash: False)'.format(context.domain, context.user, context.passwd[:1])])
 
             try:
                 # Define LDAP server to use for query
