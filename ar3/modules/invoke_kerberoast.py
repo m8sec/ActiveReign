@@ -1,14 +1,16 @@
 from ar3.helpers import powershell
-from ar3.helpers.misc import get_local_ip
+from ar3.logger import setup_file_logger
 from ar3.ops.enum.host_enum import code_execution
+from ar3.helpers.misc import get_local_ip, get_filestamp
 
 class InvokeKerberoast():
     def __init__(self):
-        self.name = 'Kerberoast'
-        self.description = 'Use Empires invoke-kerberoasting module'
-        self.author = ['@m8r0wn']
-        self.credit = ['@EmpireProject']
-        self.args = {}
+        self.name           = 'Kerberoast'
+        self.description    = 'Use Empires invoke-kerberoasting module'
+        self.author         = ['@m8r0wn']
+        self.credit         = ['@EmpireProject']
+        self.requires_admin = True
+        self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
@@ -35,5 +37,11 @@ class InvokeKerberoast():
             # Display Output
             for line in x.splitlines():
                 loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(), line])
+
+            # write results to file
+            file_name = 'kerberoast_{}_{}.txt'.format(target, get_filestamp())
+            tmp_logger = setup_file_logger(args.workspace, file_name, ext='')
+            tmp_logger.info(x)
+            loggers['console'].info([smb_con.host, smb_con.ip, self.name.upper(), "Output saved to: {}".format(file_name)])
         except Exception as e:
             logger.debug("{} Error: {}".format(self.name, str(e)))

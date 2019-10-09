@@ -3,9 +3,10 @@ from ar3.logger import highlight
 
 class InvertHunter():
     def __init__(self):
-        self.name = 'invert_hunter'
-        self.description = 'Search system(s) for the absence of a process (i.e: AV_product.exe)'
-        self.author = ['@m8r0wn']
+        self.name           = 'invert_hunter'
+        self.description    = 'Search system(s) for the absence of a process (i.e: AV_product.exe)'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = True
         self.args = {
             'PROCESS': {
                 'Description'   : 'Process to search for',

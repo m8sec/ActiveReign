@@ -4,10 +4,11 @@ from ar3.ops.enum.host_enum import code_execution
 
 class InvokeVNC():
     def __init__(self):
-        self.name = 'Invoke-VNC'
-        self.description = 'Load VNC client into memory to create a session on the system'
-        self.author = ['@m8r0wn']
-        self.credit = ['@EmpireProject']
+        self.name           = 'Invoke-VNC'
+        self.description    = 'Load VNC client into memory to create a session on the system'
+        self.author         = ['@m8r0wn']
+        self.credit         = ['@EmpireProject']
+        self.requires_admin = True
         self.args = {
             'CONTYPE'   : {
                 'Description'   : 'Type of payload to use {reverse, bind}',

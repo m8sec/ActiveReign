@@ -7,7 +7,7 @@ from impacket.dcerpc.v5.dcomrt import DCOMConnection
 from ar3.helpers.misc import gen_random_string, get_local_ip
 
 class WMIEXEC():
-    def __init__(self, logger, host, args, smb_con, share_name=''):
+    def __init__(self, logger, host, args, smb_con, share_name=False):
         self.outfile    = gen_random_string()
         self.debug      = args.debug
         self.logger     = logger

@@ -138,8 +138,8 @@ def setup_logger(log_level=logging.INFO, logger_name='ar3'):
     return AR3Adapter()
 
 
-def setup_file_logger(workspace, log_name, log_level=logging.INFO):
-    filename = setup_log_file(workspace, log_name)
+def setup_file_logger(workspace, log_name, log_level=logging.INFO, ext='.csv'):
+    filename = setup_log_file(workspace, log_name, ext)
     formatter = logging.Formatter("%(message)s")
     fh = logging.FileHandler(filename)
     fh.setFormatter(formatter)
@@ -149,11 +149,11 @@ def setup_file_logger(workspace, log_name, log_level=logging.INFO):
     return logger
 
 
-def setup_log_file(workspace, log_name):
+def setup_log_file(workspace, log_name, ext='.csv'):
     file_location = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', workspace)
     if not os.path.exists(file_location):
         os.makedirs(file_location)
-    return '{}/{}.csv'.format(file_location, log_name)
+    return '{}/{}{}'.format(file_location, log_name, ext)
 
 
 def print_args(args, logger):

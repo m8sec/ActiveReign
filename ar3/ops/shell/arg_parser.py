@@ -35,6 +35,10 @@ def shell_arg_mods(args, db_obj, loggers):
         # Get password if not provided
         args.passwd = getpass("Enter password, or continue with null-value: ")
 
+    if args.exec_method.lower() == 'ssh':
+        loggers['console'].warning("SSH Shells are not supported, try the native:\n\t\"ssh user@target_ip\"\n")
+        exit(0)
+
     if args.cred_id and not args.user:
         enum_user = db_obj.extract_user(args.cred_id)
         if enum_user:

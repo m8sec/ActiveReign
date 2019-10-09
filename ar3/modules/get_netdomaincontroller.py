@@ -3,10 +3,11 @@ from ar3.core.ldap.query import ATTRIBUTES
 
 class GetNetDomainController():
     def __init__(self):
-        self.name = 'domaincontroller'
-        self.description = 'List domain controllers on domain'
-        self.author = ['@m8r0wn']
-        self.args = {}
+        self.name           = 'domaincontroller'
+        self.description    = 'List domain controllers on domain'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = False
+        self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']

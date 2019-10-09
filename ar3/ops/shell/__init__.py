@@ -4,6 +4,7 @@ from ar3.core.smb import SmbCon
 from ar3.core.winrm import WINRM
 from ar3.core.smbexec import SMBEXEC
 from ar3.core.wmiexec import WMIEXEC
+from ar3.core.atexec import TSCHEXEC
 from ar3.servers.smb import SMBServer
 from ar3.helpers.misc import gen_random_string
 from ar3.core.connector import Connector
@@ -124,6 +125,9 @@ class AR3Shell(Connector):
 
         elif self.exec_method.lower() == 'smbexec':
             self.executioner = SMBEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
+
+        elif self.exec_method.lower() == 'atexec':
+            self.executioner = TSCHEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
 
         elif self.exec_method.lower() == 'winrm':
             self.executioner = WINRM(self.logger, self.host, self.args, self.smbcon)

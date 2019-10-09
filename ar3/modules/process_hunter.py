@@ -2,9 +2,10 @@ from ar3.core.wmi import WmiCon
 
 class ProcessHunter():
     def __init__(self):
-        self.name = 'process_hunter'
-        self.description = 'Search system(s) for running process'
-        self.author = ['@m8r0wn']
+        self.name           = 'process_hunter'
+        self.description    = 'Search system(s) for running process'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = True
         self.args = {
             'PROCESS': {
                 'Description'   : 'Process to search for',

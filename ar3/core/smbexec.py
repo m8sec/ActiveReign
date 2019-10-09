@@ -7,7 +7,7 @@ from ar3.helpers.misc import gen_random_string, get_local_ip
 
 
 class SMBEXEC():
-    def __init__(self, logger, host, args, smb_con, port=445, share_name=''):
+    def __init__(self, logger, host, args, smb_con, port=445, share_name=False):
 
         self.logger         = logger
         self.outfile        = gen_random_string()

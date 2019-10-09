@@ -1,6 +1,7 @@
 from os import _exit
 from threading import Thread
 
+from ar3.core.ssh import SSH
 from ar3.core.wmi import WmiCon
 from ar3.core.rpc import RpcCon
 from ar3.core.smb import SmbCon
@@ -9,6 +10,7 @@ from ar3.core.winrm import WINRM
 from ar3.helpers import powershell
 from ar3.core.wmiexec import WMIEXEC
 from ar3.core.smbexec import SMBEXEC
+from ar3.core.atexec import TSCHEXEC
 from ar3.helpers.misc import slack_post
 from ar3.ops.enum.polenum import SAMRDump
 from ar3.ops.enum.share_finder import share_finder
@@ -22,8 +24,7 @@ def requires_admin(func):
         return func(con, *args, **kwargs)
     return _decorator
 
-
-def login(args, loggers, host, db, lockout_obj):
+def smb_login(args, loggers, host, db, lockout_obj):
     try:
         con = SmbCon(args, loggers, host, db)
         con.create_smb_con()
@@ -32,6 +33,18 @@ def login(args, loggers, host, db, lockout_obj):
         lockout_obj.failed_login(host, str(e))
         return False
 
+def ssh_login(args, loggers, host, db, lockout_obj):
+    try:
+        con = SSH(args, loggers, host, db)
+        con.create_ssh_con()
+        con.host_info()
+        con.isAdmin()
+        con.signing = 'N/A'
+        con.smbv1   = 'N/A'
+        return con
+    except Exception as e:
+        lockout_obj.failed_login(host, str(e))
+        return False
 
 def password_policy(con, args, db_obj, loggers):
     ppol = SAMRDump(con, args.debug, loggers['console'])
@@ -54,9 +67,12 @@ def code_execution(con, args, target, loggers, config_obj, payload, return_data=
         executioner = WMIEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
     elif args.exec_method.lower() == 'smbexec':
         executioner = SMBEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
+    elif args.exec_method.lower() == 'atexec':
+        executioner = TSCHEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
     elif args.exec_method.lower() == 'winrm':
         executioner = WINRM(loggers['console'], target, args, con, share_name=False)
-
+    elif args.exec_method.lower() == 'ssh':
+        executioner = con
     # Log action to file
     loggers[args.mode].info("Code Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, payload))
 
@@ -147,6 +163,11 @@ def execute_module(con, args, target, loggers, config_obj):
     try:
         module_class = get_module_class(args.module)
         class_obj = module_class()
+        # Admin check for module
+        if class_obj.requires_admin and not con.admin:
+            loggers['console'].warning([con.host, con.ip, args.module.upper(),"{} requires administrator access".format(args.module)])
+            return
+
         populate_mod_args(class_obj, args.module_args, loggers['console'])
         loggers[args.mode].info("Module Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, args.module))
         class_obj.run(target, args, con, loggers, config_obj)
@@ -158,7 +179,10 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
     try:
         # OS Enumeration
         try:
-            con = login(args, loggers, target, db_obj, lockout)
+            if args.exec_method == 'ssh':
+                con = ssh_login(args, loggers, target, db_obj, lockout)
+            else:
+                con = smb_login(args, loggers, target, db_obj, lockout)
             if con.admin:
                 loggers['console'].success([con.host, con.ip, "ENUM", con.os + con.os_arch, "(Domain: {})".format(con.srvdomain), "(Signing: {})".format(str(con.signing)), "(SMBv1: {})".format(str(con.smbv1)), "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))])
             else:
@@ -166,43 +190,49 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
         except Exception as e:
             return []
 
-        # Sharefinder
         shares = []
-        if args.share:
-            shares = args.share.split(",")
-            for share in shares:
-                loggers['console'].info([con.host, con.ip, "SHAREFINDER", "\\\\{}\\{}".format(con.host, share)])
+        if args.exec_method == 'ssh':
+            if args.execute:
+                # Override admin to allow execution
+                con.admin = True
+                code_execution(con, args, target, loggers, config_obj, args.execute)
+        else:
+            # Sharefinder
+            if args.share:
+                shares = args.share.split(",")
+                for share in shares:
+                    loggers['console'].info([con.host, con.ip, "SHAREFINDER", "\\\\{}\\{}".format(con.host, share)])
 
-        elif args.sharefinder or args.spider:
-            shares = share_finder(con, args, loggers, target)
+            elif args.sharefinder or args.spider:
+                shares = share_finder(con, args, loggers, target)
 
-        # Secondary actions
-        if args.gen_relay_list and not con.signing:
-            loggers['relay_list'].info(con.host)
-        if args.passpol:
-            password_policy(con, args, db_obj, loggers)
-        if args.sam:
-            extract_sam(con, args, target, loggers)
-        if args.ntds:
-            extract_ntds(con, args, target, loggers)
-        if args.loggedon:
-            loggedon_users(con, args, target, loggers)
-        if args.sessions:
-            active_sessions(con, args, target, loggers)
-        if args.list_processes:
-            tasklist(con, args, loggers)
-        if args.local_groups:
-            get_netlocalgroups(con, args, target, loggers)
-        if args.local_members:
-            localgroup_members(con, args, target, loggers)
-        if args.wmi_query:
-            wmi_query(con, args, target, loggers)
-        if args.execute:
-            code_execution(con, args, target, loggers, config_obj, args.execute)
-        if args.ps_execute:
-            ps_execution(con, args, target, loggers, config_obj)
-        if args.module:
-            execute_module(con, args, target, loggers, config_obj)
+            # Secondary actions
+            if args.gen_relay_list and not con.signing:
+                loggers['relay_list'].info(con.host)
+            if args.passpol:
+                password_policy(con, args, db_obj, loggers)
+            if args.sam:
+                extract_sam(con, args, target, loggers)
+            if args.ntds:
+                extract_ntds(con, args, target, loggers)
+            if args.loggedon:
+                loggedon_users(con, args, target, loggers)
+            if args.sessions:
+                active_sessions(con, args, target, loggers)
+            if args.list_processes:
+                tasklist(con, args, loggers)
+            if args.local_groups:
+                get_netlocalgroups(con, args, target, loggers)
+            if args.local_members:
+                localgroup_members(con, args, target, loggers)
+            if args.wmi_query:
+                wmi_query(con, args, target, loggers)
+            if args.execute:
+                code_execution(con, args, target, loggers, config_obj, args.execute)
+            if args.ps_execute:
+                ps_execution(con, args, target, loggers, config_obj)
+            if args.module:
+                execute_module(con, args, target, loggers, config_obj)
 
         # Close connections & return
         try:

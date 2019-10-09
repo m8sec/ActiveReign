@@ -8,14 +8,13 @@ class WINRM():
     def __init__(self, logger, host, args, smb_con, share_name=False):
         if share_name:
             raise Exception('WINRM does not support fileless execution')
-
         self.args    = args
         self.host    = host
         self.smb_con = smb_con
         self.logger  = logger
 
         try:
-            if not self.winrm_con():
+            if not self.winrm_con() and args.module != 'test_execution':
                 self.logger.fail([self.smb_con.host, self.smb_con.ip, "WINRM", "No WINRM endpoint detected"])
             self.winrm_login()
         except Exception as e:

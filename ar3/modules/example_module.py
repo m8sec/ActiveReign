@@ -1,8 +1,9 @@
 class ExampleModule():
     def __init__(self):
-        self.name = 'Example Module'
-        self.description = 'Will take in CMD arg and print to screen'
-        self.author = ['@m8r0wn']
+        self.name           = 'Example Module'
+        self.description    = 'Will take in CMD arg and print to screen'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = False
         self.args = {
             'ARGUMENTS': {
                 'Description'   : 'Value to print',

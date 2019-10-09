@@ -4,9 +4,10 @@ from ar3.logger import setup_file_logger
 
 class GPP_Password():
     def __init__(self):
-        self.name = 'gpp_password'
-        self.description = 'Looks for "cpassword" values in SYSVOL'
-        self.author = ['@m8r0wn']
+        self.name           = 'gpp_password'
+        self.description    = 'Looks for "cpassword" values in SYSVOL'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = False
         self.args = {
             'DC': {
                 'Description'   : 'Domain Controller (otherwise provided target will be used)',

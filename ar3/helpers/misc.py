@@ -31,6 +31,10 @@ def gen_random_string(length=6):
 def get_timestamp():
     return datetime.now().strftime('%m-%d-%Y %H:%M:%S')
 
+def get_filestamp():
+    # Timestamp formatted for filenames
+    return datetime.now().strftime('%m-%d-%y-%H%M%S')
+
 def slack_post(api_token, channel, data):
     header = {
                 'Content-Type'  :   'application/json;charset=utf-8',

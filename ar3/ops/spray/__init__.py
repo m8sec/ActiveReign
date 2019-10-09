@@ -21,8 +21,13 @@ def main(args, config_obj, db_obj, loggers):
         for target in args.target:
             for user in args.user:
 
+                # Last minute adjustments to spray values
                 if args.combo:
                     user, passwd = user.split(':')
+                if args.user_as_pass:
+                    passwd = user.strip()
+                elif args.hash:
+                    passwd = ''
 
                 # Create new namespace to pass to spray handler
                 auth_args = Namespace(user         = user,
@@ -48,9 +53,6 @@ def main(args, config_obj, db_obj, loggers):
 
 
 def spray(auth_args, loggers, db_obj, config_obj, target, user, passwd):
-    if auth_args.user_as_pass:   passwd = user
-    elif auth_args.hash:         passwd = ''
-
     try:
         if auth_args.method.lower() == "ldap":
             con = LdapCon(auth_args, loggers, target, db_obj)

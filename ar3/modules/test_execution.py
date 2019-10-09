@@ -1,17 +1,18 @@
 from threading import Thread
-from ar3.logger import highlight
 from ar3.core.winrm import WINRM
 from ar3.core.wmiexec import WMIEXEC
 from ar3.core.smbexec import SMBEXEC
+from ar3.core.atexec import TSCHEXEC
 from ar3.servers.smb import SMBServer
 from ar3.helpers.misc import gen_random_string
 
 class TestExecution():
     def __init__(self):
-        self.name = 'test_execution'
+        self.name           = 'test_execution'
         self.description = 'Use on single system with known admin privileges to determine optimal execution method'
-        self.author = ['@m8r0wn']
-        self.args = {}
+        self.author         = ['@m8r0wn']
+        self.requires_admin = True
+        self.args           = {}
 
     def test_execution(self, args, smb_con, target, exec_method, exec_type, logger):
         test_string = gen_random_string()
@@ -38,6 +39,10 @@ class TestExecution():
                         'Fileless'  : '\033[1;31mFAILED\033[0m',
                         'Remote'    : '\033[1;31mFAILED\033[0m'
                         },
+            TSCHEXEC:   {'Name': 'ATEXEC',
+                        'Fileless': '\033[1;31mFAILED\033[0m',
+                        'Remote': '\033[1;31mFAILED\033[0m'
+                       },
             WINRM   :  {'Name'      : 'WINRM',
                         'Fileless'  : '\033[1;33mN/A\033[0m',
                         'Remote'    : '\033[1;31mFAILED\033[0m'
@@ -71,7 +76,7 @@ class TestExecution():
 
         # Print Results
         for xmethod, data in self.exec_method.items():
-            logger.info([smb_con.host, smb_con.ip, highlight(self.name.upper()), '   \033[1;30mExecution Method:\033[0m {:<10} \033[1;30mFileless: {:<20} \033[1;30mRemote (Defualt): {}'.format(data['Name'], data['Fileless'], data['Remote'])])
+            logger.info([smb_con.host, smb_con.ip, self.name.upper(), '\033[1;30mExecution Method:\033[0m {:<10} \033[1;30mFileless: {:<20} \033[1;30mRemote (Defualt): {}'.format(data['Name'], data['Fileless'], data['Remote'])])
 
         # Shutdown SMBServer and Exit
         smb_srv_obj.cleanup_server()

@@ -2,10 +2,11 @@ from ar3.core.rpc import RpcCon
 
 class UserHunter():
     def __init__(self):
-        self.name = 'user_hunter'
-        self.description = 'Search for specific user with active session on system'
-        self.author = ['@m8r0wn']
-        self.args = {
+        self.name           = 'user_hunter'
+        self.description    = 'Search for specific user with active session on system'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = False
+        self.args           = {
             'USER': {
                 'Description'   : 'User to search for',
                 'Required'      : True,

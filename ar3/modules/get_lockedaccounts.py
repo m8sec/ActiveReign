@@ -4,9 +4,10 @@ class GetLockedAccounts():
     def __init__(self):
 
 
-        self.name = 'lockedaccounts'
-        self.description = 'List active domain accounts that are locked or within 1 away from the threshold'
-        self.author = ['@m8r0wn']
+        self.name           = 'lockedaccounts'
+        self.description    = 'List active domain accounts that are locked or within 1 away from the threshold'
+        self.author         = ['@m8r0wn']
+        self.requires_admin = False
         self.args = {
             'THRESHOLD': {
                 'Description': 'Lockout threshold if LDAP fails (Default: 3)',

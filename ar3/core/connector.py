@@ -19,6 +19,7 @@ class Connector():
         self.debug      = args.debug
         self.timeout    = args.timeout
 
+
         # Target Host
         self.host = host
         if not self.host:
@@ -35,3 +36,10 @@ class Connector():
                 self.lmhash, self.nthash = self.hash.split(':')
             except:
                 self.nthash = self.hash
+
+        # Vars displayed during enumeration, populated by class obj
+        self.os         = ''
+        self.os_arch    = ''
+        self.signing    = ''
+        self.smbv1      = ''
+        self.srvdomain  = ''

