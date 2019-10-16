@@ -28,7 +28,7 @@ If you are doing a direct comparison, [CME](https://github.com/byt3bl33d3r/Crack
 * Automatically extract domain information via LDAP and incorporate into network enumeration.
 * Perform Domain password spraying using LDAP to remove users close to lockout thresholds.
 * Local and remote command execution, for use on multiple starting points throughout the network.
-* Emulated interactive shell on target system, with file upload and download capabilities.
+* Simulated interactive shell on target system, with file upload and download capabilities.
 * Data discovery capable of scanning xlsx and docx files.
 * Various modules to add and extend capabilities.
 
