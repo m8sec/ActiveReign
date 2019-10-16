@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://user-images.githubusercontent.com/13889819/62736481-6f7e7880-b9fb-11e9-92d6-47b650fdb84b.png"/>
   <br>
-  <img src="https://img.shields.io/badge/Python-3.6+-blue.svg"/>&nbsp;
+  <img src="https://img.shields.io/badge/Python-3.7-blue.svg"/>&nbsp;
   <img src="https://img.shields.io/badge/License-GPLv3-green.svg">&nbsp;
   <!--<img src="https://img.shields.io/badge/Demo-Youtube-red.svg"/>&nbsp;-->
   <a href="https://twitter.com/intent/follow?screen_name=m8r0wn">
