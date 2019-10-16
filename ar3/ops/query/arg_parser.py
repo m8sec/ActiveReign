@@ -27,8 +27,9 @@ def query_args(sub_parser):
     qtypes.add_argument('--custom', dest="custom", type=str, default='', help="Perform custom query")
 
     qoptions = query_parser.add_argument_group("Query Options")
-    qoptions.add_argument('-q', '--query', dest='query', type=str, default='', help='Specify user or group to query')
+    qoptions.add_argument('-q', '--query', dest='query', type=str, default='', help='Specify user, computer, or group to query')
     qoptions.add_argument('-a', dest='attrs', type=str, default='', help='Specify attrs to query')
+    qoptions.add_argument('--all', dest='all', action='store_true', help='Enumerate all users (even disabled) or all groups & members')
 
     auth = query_parser.add_argument_group("Query Authentication")
     auth.add_argument('-id', dest='cred_id', type=int, help='Use creds from db for queries')

@@ -1,7 +1,7 @@
 from dns.resolver import Resolver
 
 from ar3.core.ldap import LdapCon
-from ar3.core.ldap.query import QUERIES, ATTRIBUTES
+from ar3.core.ldap.query import QUERIES, ATTRIBUTES, UAC_LOOKUP
 
 
 def resolve_host(host, dns_server):
@@ -30,7 +30,7 @@ def attribute_parser(logger, host, ip, key, attribute, data, title="PARSER"):
 # USERS
 #########################
 def user_query(args, query, loggers, db_obj, user_lookup=False):
-    resp = query.user_query(user_lookup, args.attrs)
+    resp = query.user_query(user_lookup, args.attrs, all_users=args.all)
     for key, data in resp.items():
         try:
             data['sAMAccountName'] = data['sAMAccountName'].replace("\'", '')
@@ -48,7 +48,12 @@ def user_handler(args, logger, host, ip, user, data):
         if args.parse and attribute.lower() in ['info','comment','description']:
             attribute_parser(logger, host, ip, user, attribute, value)
 
-        if (args.verbose) or (args.query and not args.query in ['{all}', '{active}']):
+        # UserAccountControl Lookup
+        if attribute == 'userAccountControl':
+            if value in UAC_LOOKUP.keys():
+                value = "{} ({})".format(UAC_LOOKUP[value], value)
+
+        if (args.verbose) or (args.query):
             logger.info([host, ip, "USERS", "{:<20} {:<24} : {}".format(user, attribute, value)])
         else:
             logger.info([host, ip, "USERS", user])
@@ -59,8 +64,9 @@ def user_handler(args, logger, host, ip, user, data):
 #########################
 def group_query_all(args, query, loggers, db_obj):
     # Enumerate all groups and users on the domain
-    for group in query.group_query([]).keys():
-        group_query(args, query, loggers, db_obj, group_lookup=group)
+    for group in query.con.group_query([]).keys():
+        query.create_ldap_con()
+        group_query(args, query.con, loggers, db_obj, group_lookup=group)
 
 def group_query(args, query, loggers, db_obj, group_lookup=False):
     # Enum groups or lookup members of a single group
@@ -78,7 +84,7 @@ def group_query(args, query, loggers, db_obj, group_lookup=False):
                 else:
                     db_obj.update_group(key, args.domain)
                     db_obj.update_group_members(args.domain, key, group_lookup)
-                    group_membership_handler(args, loggers['console'], query.host, query.ip, key, data, group_lookup, title='GROUP')
+                    group_membership_handler(args, loggers['console'], query.host, query.ip, key, data, group_lookup, title='MEMBER: GROUP')
             except Exception as e:
                 loggers['console'].warning(["Query Error {}".format(key), str(e)])
 
@@ -110,7 +116,7 @@ def group_handler(args, logger, host, ip, key, data):
                 logger.info([host, ip, "GROUPS", key])
             return
 
-def group_membership_handler(args, logger, host, ip, user, data, group, title='USER'):
+def group_membership_handler(args, logger, host, ip, user, data, group, title='MEMBER: USER'):
     if args.data_only:
         logger.output(user)
         return
@@ -199,7 +205,7 @@ def trust_handler(args, logger, host, ip, key, data):
 #########################
 # CUSTOM
 #########################
-def custom_query(args, cust_query, cust_attr, query_obj, loggers, db_obj, title='QUERY'):
+def custom_query(args, cust_query, cust_attr, query_obj, loggers, db_obj, title='CUSTOM'):
     resp = query_obj.custom_query(cust_query, cust_attr)
     for key, data in resp.items():
         custom_handler(args, loggers['console'], query_obj.host, query_obj.ip, key, data, title)
@@ -234,8 +240,7 @@ def recon(args, query, loggers, db_obj):
     domain_query(args, query.con, loggers, db_obj)
     query.create_ldap_con()
     user_query(args, query.con, loggers, db_obj, user_lookup="{active}")
-    query.create_ldap_con()
-    group_query_all(args, query.con, loggers, db_obj)
+    group_query_all(args, query, loggers, db_obj)
     query.create_ldap_con()
     computer_query(args, query.con, loggers, db_obj)
 
@@ -272,6 +277,7 @@ class LDAPHandler():
     def close(self):
         if self.con:
             self.con.close()
+
 #########################
 # Main
 #########################
@@ -296,8 +302,8 @@ def main(args, config_obj, db_obj, loggers):
 
         if args.groups:
             query.create_ldap_con()
-            if args.query == "{all}":
-                group_query_all(args, query.con, loggers, db_obj)
+            if args.all:
+                group_query_all(args, query, loggers, db_obj)
             else:
                 group_query(args, query.con, loggers, db_obj, group_lookup=args.query)
 
@@ -306,16 +312,20 @@ def main(args, config_obj, db_obj, loggers):
             computer_query(args, query.con, loggers, db_obj)
 
         if args.pass_never_expire:
+            query.create_ldap_con()
             custom_query(args, QUERIES['pass_never_expire'], ATTRIBUTES['users'] + args.attrs, query.con, loggers, db_obj, title="PASS NEVER EXPIRE  ")
 
         if args.pass_not_required:
+            query.create_ldap_con()
             custom_query(args, QUERIES['pass_not_required'], ATTRIBUTES['users'] + args.attrs, query.con, loggers, db_obj, title="PASS NOT REQUIRED  ")
 
         if args.reversible_encryption:
+            query.create_ldap_con()
             custom_query(args, QUERIES['reversible_encryption'], ATTRIBUTES['users'], query.con, loggers, db_obj, title="REVERSIBLE ENCRYPTION  ")
 
         if args.custom:
-            custom_query(args, args.query, args.attrs, query, loggers, db_obj)
+            query.create_ldap_con()
+            custom_query(args, args.query, args.attrs, query.con, loggers, db_obj)
 
         query.close()
     except Exception as e:

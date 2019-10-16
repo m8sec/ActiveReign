@@ -19,7 +19,7 @@ If you are doing a direct comparison, [CME](https://github.com/byt3bl33d3r/Crack
 ### Operational Modes
 * db    - Query or insert values in to the ActiveReign database
 * enum  - System enumeration & module execution
-* shell - Spawn an emulated shell on a target system
+* shell - Spawn a simulated shell on the target system and perform command execution
 * spray - Domain password spraying and brute force
 * query - Perform LDAP queries on the domain
 

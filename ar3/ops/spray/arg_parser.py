@@ -20,7 +20,7 @@ def spray_args(sub_parser):
     sp_user = u.add_mutually_exclusive_group(required=True)
     sp_user.add_argument('-u', dest='user', type=str, action='append', help='User to spray {account name, ldap}')
     sp_user.add_argument('-U', dest='user', default=False, type=lambda x: file_exists(sub_parser, x), help='User file to spray {Users.txt}')
-    sp_user.add_argument('--domain-users', '-du', dest='domain_users', action='store_true', help='Extract users from LDAP (domain password spray)')
+    sp_user.add_argument('--domain-users', dest='domain_users', action='store_true', help='Extract users from LDAP (domain password spray)')
 
     # Password
     p = spray_parser.add_argument_group("Password Options")

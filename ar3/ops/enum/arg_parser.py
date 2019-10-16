@@ -104,10 +104,10 @@ def enum_arg_mods(args, db_obj, loggers):
     # Cred ID present & no user/pass provided, for us in enumeration
     elif args.cred_id and not args.user:
         enum_user = db_obj.extract_user(args.cred_id)
-        args.user    = enum_user[0][0],
-        args.passwd  = enum_user[0][1],
-        args.hash    = enum_user[0][2],
-        args.domain  = enum_user[0][3],
+        args.user    = enum_user[0][0]
+        args.passwd  = enum_user[0][1]
+        args.hash    = enum_user[0][2]
+        args.domain  = enum_user[0][3]
 
     # Gather target systems using ldap
     if args.ldap or args.eol:
@@ -123,6 +123,7 @@ def enum_arg_mods(args, db_obj, loggers):
             context.passwd  = args.passwd
             context.hash    = args.hash
             context.domain  = args.domain
+
 
         else:
             logger.warning("To use the LDAP feature, please select a valid credential ID or enter domain credentials")

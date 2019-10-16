@@ -4,6 +4,7 @@ class ExampleModule():
         self.description    = 'Will take in CMD arg and print to screen'
         self.author         = ['@m8r0wn']
         self.requires_admin = False
+        self.supported_exec_methods   = ['wmiexec', 'smbexec', 'atexec', 'winrm', 'ssh']
         self.args = {
             'ARGUMENTS': {
                 'Description'   : 'Value to print',

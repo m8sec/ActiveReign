@@ -78,12 +78,13 @@ class LdapCon(Connector):
     ##################################################
     # Ldap Search Types
     ##################################################
-    def user_query(self, query, attrs):
+    def user_query(self, query, attrs, all_users=False):
         if attrs:
             ATTRIBUTES['users'] = ATTRIBUTES['users'] + attrs
 
         search = QUERIES['users_active']
-        if query == '{all}':
+        if all_users:
+            # Query all users, even disabled
             search = QUERIES['users_all']
         elif '@' in query:
             search = QUERIES['users_email_search'].format(query.lower())
