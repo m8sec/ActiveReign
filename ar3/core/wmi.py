@@ -15,8 +15,6 @@ from ar3.core.connector import Connector
 class WmiCon(Connector):
     def __init__(self, args, loggers, ip, host):
         Connector.__init__(self, args, loggers, ip)
-        """Display var passed for output formatting but, IP is used to
-           establish to connection, as hostname can be inconsistent"""
         self.display_ip   = ip
         self.display_host = host
         self._debug       = False

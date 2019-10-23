@@ -125,18 +125,22 @@ def loggedon_users(con, args, target, loggers):
         else:
             loggers['console'].info([con.host, con.ip, "LOGGEDON", '{}\{}'.format(data['domain'], user)])
 
-
 def active_sessions(con, args, target, loggers):
     x = RpcCon(args, loggers, target)
     x.get_netsessions()
     for user, data in x.sessions.items():
         loggers['console'].info([con.host, con.ip, "SESSIONS", user, "Host: {}".format(data['host'])])
 
-
+@requires_admin
 def tasklist(con, args, loggers):
     proc = WmiCon(args, loggers, con.ip, con.host)
     proc.get_netprocess(tasklist=True)
 
+
+def list_services(con, args, loggers, target):
+    x = RpcCon(args, loggers, target)
+    for key,svc in x.list_services().items():
+        loggers['console'].info([con.host, con.ip, "SERVICES", "{:<25} {:<12} {}".format(svc['Name'], svc['Status'], svc['Display'])])
 
 @requires_admin
 def wmi_query(con, args, target, loggers):
@@ -221,6 +225,8 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
                 active_sessions(con, args, target, loggers)
             if args.list_processes:
                 tasklist(con, args, loggers)
+            if args.list_services:
+                list_services(con, args, loggers, target)
             if args.local_groups:
                 get_netlocalgroups(con, args, target, loggers)
             if args.local_members:

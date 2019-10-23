@@ -125,73 +125,73 @@ class Ar3db():
     ###########################
     def update_domain(self, domain, lockout_threshold):
         con = self.db_connect(self.dbname)
-        id = self.domain_id(con, domain)
+        id = self.domain_id(con, domain.lower())
         if id:
-            self.db_exec(con, """UPDATE DOMAINS SET NAME='{}', LOCKOUT_THRESHOLD='{}' WHERE DOMAINID={};""".format(domain, lockout_threshold, id))
+            self.db_exec(con, """UPDATE DOMAINS SET NAME='{}', LOCKOUT_THRESHOLD='{}' WHERE DOMAINID={};""".format(domain.lower(), lockout_threshold, id))
         else:
-            self.db_exec(con, """INSERT INTO DOMAINS (NAME, LOCKOUT_THRESHOLD) VALUES ('{}','{}');""".format(domain, lockout_threshold))
+            self.db_exec(con, """INSERT INTO DOMAINS (NAME, LOCKOUT_THRESHOLD) VALUES ('{}','{}');""".format(domain.lower(), lockout_threshold))
         con.close()
 
     def update_domain_ldap(self, domain, threshold, duration, length, age):
         # Update all values in domain policy
         con = self.db_connect(self.dbname)
-        id = self.domain_id(con, domain)
+        id = self.domain_id(con, domain.lower())
         if id:
-            self.db_exec(con, """UPDATE DOMAINS SET NAME='{}', LOCKOUT_THRESHOLD='{}', LOCKOUT_DURATION='{}', MIN_PWD_LENGTH='{}', MAX_PWD_AGE='{}' WHERE DOMAINID={};""".format(domain, threshold, duration, length, age, id))
+            self.db_exec(con, """UPDATE DOMAINS SET NAME='{}', LOCKOUT_THRESHOLD='{}', LOCKOUT_DURATION='{}', MIN_PWD_LENGTH='{}', MAX_PWD_AGE='{}' WHERE DOMAINID={};""".format(domain.lower(), threshold, duration, length, age, id))
         else:
-            self.db_exec(con, """INSERT INTO DOMAINS (NAME, LOCKOUT_THRESHOLD, LOCKOUT_DURATION, MIN_PWD_LENGTH, MAX_PWD_AGE) VALUES ('{}','{}','{}','{}','{}');""".format(domain, threshold, duration, length, age))
+            self.db_exec(con, """INSERT INTO DOMAINS (NAME, LOCKOUT_THRESHOLD, LOCKOUT_DURATION, MIN_PWD_LENGTH, MAX_PWD_AGE) VALUES ('{}','{}','{}','{}','{}');""".format(domain.lower(), threshold, duration, length, age))
         con.close()
 
     def update_host(self, hostname, ip, domain, os, signing):
         con = self.db_connect(self.dbname)
-        id = self.host_id(con, hostname)
+        id = self.host_id(con, hostname.lower())
         if id:
-            self.db_exec(con,"""UPDATE HOSTS SET HOSTNAME='{}', IP='{}', DOMAIN='{}', OS='{}', SIGNING='{}' WHERE HOSTID={};""".format(hostname, ip, domain, os, signing, id))
+            self.db_exec(con,"""UPDATE HOSTS SET HOSTNAME='{}', IP='{}', DOMAIN='{}', OS='{}', SIGNING='{}' WHERE HOSTID={};""".format(hostname.lower(), ip, domain.lower(), os, signing, id))
         else:
-            self.db_exec(con, """INSERT OR REPLACE INTO HOSTS(HOSTNAME, IP, DOMAIN, OS, signing) VALUES ('{}','{}','{}','{}', '{}');""".format(hostname, ip, domain, os, signing))
+            self.db_exec(con, """INSERT OR REPLACE INTO HOSTS(HOSTNAME, IP, DOMAIN, OS, signing) VALUES ('{}','{}','{}','{}', '{}');""".format(hostname.lower(), ip, domain.lower(), os, signing))
         con.close()
 
     def update_host_ldap(self, hostname, ip, domain, os):
         # Update host using ldap information
         con = self.db_connect(self.dbname)
-        id = self.host_id(con, hostname)
+        id = self.host_id(con, hostname.lower())
         if id:
-            self.db_exec(con,"""UPDATE HOSTS SET HOSTNAME='{}', IP='{}', DOMAIN='{}', OS='{}' WHERE HOSTID={};""".format(hostname, ip, domain, os, id))
+            self.db_exec(con,"""UPDATE HOSTS SET HOSTNAME='{}', IP='{}', DOMAIN='{}', OS='{}' WHERE HOSTID={};""".format(hostname.lower(), ip, domain.lower(), os, id))
         else:
-            self.db_exec(con, """INSERT OR REPLACE INTO HOSTS(HOSTNAME, IP, DOMAIN, OS) VALUES ('{}','{}','{}','{}');""".format(hostname, ip, domain, os))
+            self.db_exec(con, """INSERT OR REPLACE INTO HOSTS(HOSTNAME, IP, DOMAIN, OS) VALUES ('{}','{}','{}','{}');""".format(hostname.lower(), ip, domain.lower(), os))
         con.close()
 
 
     def update_user(self, username, passwd, domain, hash):
         con = self.db_connect(self.dbname)
-        id = self.user_id(con, username, domain)
+        id = self.user_id(con, username.lower(), domain.lower())
         if id:
-            self.db_exec(con,"""UPDATE USERS SET USERNAME='{}', PASSWORD='{}', DOMAIN='{}', HASH='{}' WHERE USERID={};""".format(username, passwd, domain, hash, id))
+            self.db_exec(con,"""UPDATE USERS SET USERNAME='{}', PASSWORD='{}', DOMAIN='{}', HASH='{}' WHERE USERID={};""".format(username.lower(), passwd, domain.lower(), hash, id))
         else:
-            self.db_exec(con,"""INSERT INTO USERS (USERNAME, PASSWORD, DOMAIN, HASH) VALUES ('{}','{}','{}','{}');""".format(username, passwd, domain, hash))
+            self.db_exec(con,"""INSERT INTO USERS (USERNAME, PASSWORD, DOMAIN, HASH) VALUES ('{}','{}','{}','{}');""".format(username.lower(), passwd, domain.lower(), hash))
         con.close()
 
     def update_username(self, domain, username):
         # Update username and domain values without effecting password/hash values
         con = self.db_connect(self.dbname)
-        uid = self.user_id(con, username, domain)
+        uid = self.user_id(con, username.lower(), domain.lower())
         if uid:
-            self.db_exec(con, """UPDATE USERS SET USERNAME='{}', DOMAIN='{}' WHERE USERID={};""".format(username, domain, uid))
+            self.db_exec(con, """UPDATE USERS SET USERNAME='{}', DOMAIN='{}' WHERE USERID={};""".format(username.lower(), domain.lower(), uid))
         else:
-            self.db_exec(con, """INSERT INTO USERS (USERNAME, DOMAIN) VALUES ('{}','{}');""".format(username, domain))
+            self.db_exec(con, """INSERT INTO USERS (USERNAME, DOMAIN) VALUES ('{}','{}');""".format(username.lower(), domain.lower()))
         con.close()
 
     def update_user_members(self, domain, username, group_name):
         con = self.db_connect(self.dbname)
-        uid = self.user_id(con, username, domain)
-        gid = self.group_id(con, group_name, domain)
+        uid = self.user_id(con, username.lower(), domain.lower())
+        gid = self.group_id(con, group_name, domain.lower())
         self.db_exec(con, """INSERT INTO MEMBERS_USERS (GROUPID, USERID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT MEMBERID FROM MEMBERS_USERS WHERE GROUPID={0} AND USERID={1});""".format(gid, uid))
         con.close()
 
     def update_group_members(self, domain, group_member, group_name):
         con = self.db_connect(self.dbname)
-        gmid = self.group_id(con, group_member, domain)
-        gid = self.group_id(con, group_name, domain)
+        gmid = self.group_id(con, group_member, domain.lower())
+        gid = self.group_id(con, group_name, domain.lower())
         self.db_exec(con, """INSERT INTO MEMBERS_GROUPS (GROUPID, GMID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT MEMBERID FROM MEMBERS_GROUPS WHERE GROUPID={0} AND GMID={1});""".format(gid, gmid))
         con.close()
         return
@@ -200,19 +200,19 @@ class Ar3db():
         try:
             group_name = group_name.replace("'", "").replace('"', "")
             con = self.db_connect(self.dbname)
-            id = self.group_id(con, group_name, domain)
+            id = self.group_id(con, group_name, domain.lower())
             if id:
-                self.db_exec(con,"""UPDATE GROUPS SET DOMAIN='{}', NAME='{}' WHERE GROUPID={};""".format(domain, str(group_name), id))
+                self.db_exec(con,"""UPDATE GROUPS SET DOMAIN='{}', NAME='{}' WHERE GROUPID={};""".format(domain.lower(), str(group_name), id))
             else:
-                self.db_exec(con,"""INSERT INTO GROUPS (DOMAIN, NAME) VALUES ('{}','{}');""".format(domain, str(group_name)))
+                self.db_exec(con,"""INSERT INTO GROUPS (DOMAIN, NAME) VALUES ('{}','{}');""".format(domain.lower(), str(group_name)))
             con.close()
         except Exception as e:
             self.logger.debug(['DB GROUPS', group_name, domain, str(e)])
 
     def update_admin(self, username, domain, hostname):
         con = self.db_connect(self.dbname)
-        hid = self.host_id(con, hostname)
-        uid = self.user_id(con, username, domain)
+        hid = self.host_id(con, hostname.lower())
+        uid = self.user_id(con, username.lower(), domain.lower())
         self.db_exec(con, """INSERT INTO ADMINS (USERID, HOSTID) SELECT '{0}', '{1}' WHERE NOT EXISTS(SELECT ADMINID FROM ADMINS WHERE USERID={0} AND HOSTID={1});""".format(uid, hid))
         con.close()
 

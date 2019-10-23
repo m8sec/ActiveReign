@@ -83,7 +83,7 @@ def spray(auth_args, loggers, db_obj, config_obj, target, user, passwd):
         if auth_args.hash: passwd = auth_args.hash
 
         if "password has expired" in str(e).lower():
-            loggers['console'].success2([target, target, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight("PASSWORD EXPIRED", color='yellow'))])
+            loggers['console'].success2([con.host, con.ip, auth_args.method.upper(), '{}\\{:<20} {:<15} {}'.format(auth_args.domain, user, passwd, highlight("PASSWORD EXPIRED", color='yellow'))])
             loggers[auth_args.mode].info("Spray\t{}\t{}\\{}\t{}\tPassword Expired".format(target, auth_args.domain, user, passwd))
 
         elif "account_locked_out" in str(e).lower():

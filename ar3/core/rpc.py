@@ -36,7 +36,7 @@ class RpcCon(Connector):
         if self.pipe == r'\drsuapi':
             string_binding = epm.hept_map(self.host, drsuapi.MSRPC_UUID_DRSUAPI, protocol='ncacn_ip_tcp')
             rpctransport = transport.DCERPCTransportFactory(string_binding)
-            rpctransport.set_credentials(username=self.username, password=self.password,domain=self.domain, lmhash=self.lm,nthash=self.nthash)
+            rpctransport.set_credentials(username=self.username, password=self.password,domain=self.domain, lmhash=self.lmhash,nthash=self.nthash)
         else:
             rpctransport = transport.SMBTransport(self.host, self.port, self.pipe,username=self.username, password=self.password, domain=self.domain, lmhash=self.lmhash,nthash=self.nthash)
 
@@ -55,6 +55,38 @@ class RpcCon(Connector):
             dce.bind(binding_strings[self.pipe[1:]])
             self.rpc_connection = dce
 
+    def list_services(self):
+        services = {}
+        # https://github.com/SecureAuthCorp/impacket/blob/master/examples/services.py
+        self.create_rpc_con(r'\svcctl')
+        ans = scmr.hROpenSCManagerW(self.rpc_connection)
+        scManagerHandle = ans['lpScHandle']
+        resp = scmr.hREnumServicesStatusW(self.rpc_connection, scManagerHandle)
+        for i in range(len(resp)):
+            name = resp[i]['lpServiceName'][:-1]
+            services[name]             = {}
+            services[name]['Name']     = name
+            services[name]['Display']  = resp[i]['lpDisplayName'][:-1]
+
+            state = resp[i]['ServiceStatus']['dwCurrentState']
+            if state == scmr.SERVICE_CONTINUE_PENDING:
+                services[name]['Status'] = "CONTINUE PENDING"
+            elif state == scmr.SERVICE_PAUSE_PENDING:
+                services[name]['Status'] = "PAUSE PENDING"
+            elif state == scmr.SERVICE_PAUSED:
+                services[name]['Status'] = "PAUSED"
+            elif state == scmr.SERVICE_RUNNING:
+                services[name]['Status'] = "RUNNING"
+            elif state == scmr.SERVICE_START_PENDING:
+                services[name]['Status'] = "START PENDING"
+            elif state == scmr.SERVICE_STOP_PENDING:
+                services[name]['Status'] = "STOP PENDING"
+            elif state == scmr.SERVICE_STOPPED:
+                services[name]['Status'] = "STOPPED"
+            else:
+                services[name]['Status'] = "UNKNOWN"
+        self.rpc_connection.disconnect()
+        return services
 
     def get_netsessions(self):
         self.sessions = {}

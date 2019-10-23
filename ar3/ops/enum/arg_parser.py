@@ -32,9 +32,7 @@ def enum_args(sub_parser):
     enum.add_argument('--pass-pol', dest="passpol", action='store_true', help="Enumerate password policy")
     enum.add_argument('--loggedon', dest='loggedon', action='store_true', help='Enumerate logged on users')
     enum.add_argument('--sessions', dest='sessions', action='store_true', help='Enumerate active sessions')
-    enum.add_argument('--services', dest='list_services', action='store_true', help='Show running services')
-    enum.add_argument('--services-all', dest='all_services', action='store_true', help='Show all services')
-    enum.add_argument('--tasklist', dest='list_processes', action='store_true', help='Show running processes')
+    enum.add_argument('--services', dest='list_services', action='store_true', help='List services & status')
     enum.add_argument('-s', '--sharefinder', dest="sharefinder", action='store_true',help="Find open file shares & check access")
 
     creds = enum_parser.add_argument_group("Gathering Credentials")
@@ -43,6 +41,7 @@ def enum_args(sub_parser):
     creds.add_argument('--use-vss', action='store_true', default=False, help='Use the VSS method insead of default DRSUAPI')
 
     wmi = enum_parser.add_argument_group("WMI Query")
+    wmi.add_argument('--tasklist', dest='list_processes', action='store_true', help='Show running processes')
     wmi.add_argument('--local-groups', dest='local_groups', action='store_true', help='List system local groups')
     wmi.add_argument('--local-members', dest='local_members', type=str, default='', help='List local group members')
     wmi.add_argument('--wmi', dest='wmi_query', type=str, default='', help='Execute WMI query')
