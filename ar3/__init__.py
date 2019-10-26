@@ -10,6 +10,7 @@ import argparse
 from sys import exit, argv
 from importlib import import_module
 
+from ar3 import logger
 from ar3.first_run import *
 from ar3.ops.db.db_core import Ar3db
 from ar3.loaders.config_loader import ConfigLoader
@@ -18,7 +19,6 @@ from ar3.ops.enum.arg_parser import enum_args, enum_arg_mods
 from ar3.ops.spray.arg_parser import spray_args, spray_arg_mods
 from ar3.ops.query.arg_parser import query_args, query_arg_mods
 from ar3.ops.shell.arg_parser import shell_args, shell_arg_mods
-from ar3.logger import setup_logger,setup_file_logger,print_args
 
 def banner():
     VERSION = "v1.0.4"
@@ -63,7 +63,7 @@ def main():
 
     # Init console logger
     loggers = {}
-    loggers['console'] = setup_logger(log_level, 'ar3')
+    loggers['console'] = logger.setup_logger(log_level, 'ar3')
 
     # First checks & load config
     first_run_check(loggers['console'])
@@ -73,12 +73,12 @@ def main():
     first_workspace_check(args.workspace, loggers['console'])
 
     # Setup file logger
-    loggers[args.mode] = setup_file_logger(args.workspace, args.mode)
+    loggers[args.mode] = logger.setup_file_logger(args.workspace, args.mode)
     # Setup secondary loggers - use argv since arg_mods haven't been made yet
     if '--spider' in argv:
-        loggers['spider'] = setup_file_logger(args.workspace, "spider")
+        loggers['spider'] = logger.setup_file_logger(args.workspace, "spider")
     if '--gen-relay-list' in argv:
-        loggers['relay_list'] = setup_file_logger(args.workspace, "relay_list")
+        loggers['relay_list'] = logger.setup_outfile_logger(args.gen_relay_list, "relay_list")
 
     # Setup DB
     db_obj = Ar3db(args.workspace, loggers['console'], args.debug)
@@ -86,7 +86,7 @@ def main():
     try:
         # Start
         args = eval("{}_arg_mods(args, db_obj, loggers)".format(args.mode))
-        if args.debug: print_args(args, loggers['console'])
+        if args.debug: logger.print_args(args, loggers['console'])
 
         ops = import_module("ar3.ops.{}".format(args.mode))
         ops.main(args, config_obj, db_obj, loggers)

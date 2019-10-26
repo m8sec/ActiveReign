@@ -24,14 +24,15 @@ def requires_admin(func):
         return func(con, *args, **kwargs)
     return _decorator
 
+
 def smb_login(args, loggers, host, db, lockout_obj):
+    smb = SmbCon(args, loggers, host, db)
     try:
-        con = SmbCon(args, loggers, host, db)
-        con.create_smb_con()
-        return con
+        smb.create_smb_con()
     except Exception as e:
         lockout_obj.failed_login(host, str(e))
-        return False
+    return smb
+
 
 def ssh_login(args, loggers, host, db, lockout_obj):
     try:
@@ -45,6 +46,7 @@ def ssh_login(args, loggers, host, db, lockout_obj):
     except Exception as e:
         lockout_obj.failed_login(host, str(e))
         return False
+
 
 def password_policy(con, args, db_obj, loggers):
     ppol = SAMRDump(con, args.debug, loggers['console'])
@@ -104,6 +106,11 @@ def ps_execution(con,args,target,loggers,config_obj):
             loggers['console'].info([con.host, con.ip, args.exec_method.upper(), line])
     except Exception as e:
         loggers['console'].debug([con.host, con.ip, args.exec_method.upper(), str(e)])
+
+@requires_admin
+def extract_lsa(con, args, target, loggers):
+    loggers[args.mode].info("Extract LSA\t{}\t{}\\{}".format(target, args.domain, args.user))
+    con.lsa()
 
 @requires_admin
 def extract_sam(con, args, target, loggers):
@@ -180,27 +187,33 @@ def execute_module(con, args, target, loggers, config_obj):
 
 
 def host_enum(target, args, lockout, config_obj, db_obj, loggers):
+    # @TODO refactor
     try:
-        # OS Enumeration
         try:
             if args.exec_method == 'ssh':
                 con = ssh_login(args, loggers, target, db_obj, lockout)
             else:
                 con = smb_login(args, loggers, target, db_obj, lockout)
+
+            status = ''
             if con.admin:
-                loggers['console'].success([con.host, con.ip, "ENUM", con.os + con.os_arch, "(Domain: {})".format(con.srvdomain), "(Signing: {})".format(str(con.signing)), "(SMBv1: {})".format(str(con.smbv1)), "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))])
-            else:
-                loggers['console'].info([con.host, con.ip, "ENUM", con.os + con.os_arch, "(Domain: {})".format(con.srvdomain),"(Signing: {})".format(str(con.signing)), "(SMBv1: {})".format(str(con.smbv1))])
-        except Exception as e:
+                status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
+            elif con.auth and args.user:
+                status = "({})".format(highlight('Success', 'green'))
+            elif args.user:
+                status = "({})".format(highlight('Failed', 'red'))
+
+            loggers['console'].info([con.host, con.ip, "ENUM", "{} {} ".format(con.os,con.os_arch), "(Domain: {})".format(con.srvdomain), "(Signing: {})".format(str(con.signing)), "(SMBv1: {})".format(str(con.smbv1)), status])
+
+        except:
             return []
 
         shares = []
         if args.exec_method == 'ssh':
             if args.execute:
-                # Override admin to allow execution
-                con.admin = True
+                con.admin = True # Override admin to allow execution
                 code_execution(con, args, target, loggers, config_obj, args.execute)
-        else:
+        elif con.auth:
             # Sharefinder
             if args.share:
                 shares = args.share.split(",")
@@ -212,11 +225,13 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
 
             # Secondary actions
             if args.gen_relay_list and not con.signing:
-                loggers['relay_list'].info(con.host)
+                loggers['relay_list'].info(con.ip)
             if args.passpol:
                 password_policy(con, args, db_obj, loggers)
             if args.sam:
                 extract_sam(con, args, target, loggers)
+            if args.lsa:
+                extract_lsa(con, args, target, loggers)
             if args.ntds:
                 extract_ntds(con, args, target, loggers)
             if args.loggedon:

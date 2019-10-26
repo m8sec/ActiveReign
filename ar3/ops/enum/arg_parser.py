@@ -14,7 +14,7 @@ def enum_args(sub_parser):
         exit(0)
     enum_parser.add_argument('-t', dest='timeout', type=int, default=5,help='Connection timeout')
     enum_parser.add_argument('--refresh', dest="refresh", action='store_true', help="Download/update PowerShell scripts")
-    enum_parser.add_argument('--gen-relay-list', dest='gen_relay_list', action='store_true', help='Create a file of all hosts that dont require SMB signing')
+    enum_parser.add_argument('--gen-relay-list', dest='gen_relay_list', type=str, default='', help='Create a file of all hosts that dont require SMB signing')
 
     auth = enum_parser.add_argument_group("Host Authentication")
     auth.add_argument('-u', dest='user', type=str, default='', required=False,help='Set username (Default=null)')
@@ -37,6 +37,7 @@ def enum_args(sub_parser):
 
     creds = enum_parser.add_argument_group("Gathering Credentials")
     creds.add_argument('--sam', dest='sam', action='store_true', help='Dump local SAM db')
+    creds.add_argument('--lsa', dest='lsa', action='store_true', help='Extract LSA Secrets')
     creds.add_argument('--ntds', dest='ntds', action='store_true', help='Extract NTDS.dit file')
     creds.add_argument('--use-vss', action='store_true', default=False, help='Use the VSS method insead of default DRSUAPI')
 

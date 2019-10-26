@@ -42,7 +42,7 @@ class AR3Adapter(logging.LoggerAdapter):
         0: '{:<28}',  # Hostname
         1: '{:<16}',  # IP
         2: '{:<28} ',  # Data label
-        3: '{:<55}',  # os/data
+        3: '{:<57}',  # os/data
         4: '{:<17}',  # Domain/data cont.
         5: '{:<17}',  # Signing
     }
@@ -148,6 +148,15 @@ def setup_file_logger(workspace, log_name, log_level=logging.INFO, ext='.csv'):
     logger.setLevel(log_level)
     return logger
 
+def setup_outfile_logger(filename, log_name, log_level=logging.INFO):
+    # User defined output files, not required under workspace context
+    formatter = logging.Formatter("%(message)s")
+    fh = logging.FileHandler(filename)
+    fh.setFormatter(formatter)
+    logger = logging.getLogger(log_name)
+    logger.addHandler(fh)
+    logger.setLevel(log_level)
+    return logger
 
 def setup_log_file(workspace, log_name, ext='.csv'):
     file_location = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', workspace)

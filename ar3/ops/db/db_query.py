@@ -8,7 +8,7 @@ from terminaltables import AsciiTable
 def rebuild(db_obj, logger):
     try:
         db_obj.db_rebuild()
-        logger.success("Database has been rebuilt")
+        logger.success("Database has been rebuilt\n")
     except Exception as e:
         logger.fail(str(e))
 
