@@ -25,16 +25,40 @@ def requires_admin(func):
     return _decorator
 
 
-def smb_login(args, loggers, host, db, lockout_obj):
+def smb_login(args, loggers, host, db, lockout_obj, config_obj):
+    status = ''
     smb = SmbCon(args, loggers, host, db)
-    try:
-        smb.create_smb_con()
-    except Exception as e:
-        lockout_obj.failed_login(host, str(e))
-    return smb
+    if smb.smb_connection():
+        smb.host_info()
+        try:
+            smb.login()
+
+            # Modify login status
+            if smb.admin:
+                status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
+            elif smb.auth and args.user:
+                status = "({})".format(highlight('Success', 'green'))
 
 
-def ssh_login(args, loggers, host, db, lockout_obj):
+        except Exception as e:
+            e = str(e).lower()
+            lockout_obj.failed_login(host, str(e).lower())
+            if "password_expired" in e:
+                status = "({})".format(highlight('Password_Expired', 'yellow'))
+            elif "logon_failure" in e:
+                lockout_obj.add_attempt()
+                status = "({})".format(highlight('Failed', 'red'))
+            elif "account_disabled" in e:
+                status = "({})".format(highlight('Account_Disabled', 'red'))
+
+        loggers['console'].info([smb.host, smb.ip, "ENUM", "{} {} ".format(smb.os, smb.os_arch), "(Domain: {})".format(smb.srvdomain),"(Signing: {})".format(str(smb.signing)), "(SMBv1: {})".format(str(smb.smbv1)), status])
+        return smb
+
+    else:
+        raise Exception('Connection to Server Failed')
+
+
+def ssh_login(args, loggers, host, db, lockout_obj, config_obj):
     try:
         con = SSH(args, loggers, host, db)
         con.create_ssh_con()
@@ -191,21 +215,11 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
     try:
         try:
             if args.exec_method == 'ssh':
-                con = ssh_login(args, loggers, target, db_obj, lockout)
+                con = ssh_login(args, loggers, target, db_obj, lockout, config_obj)
             else:
-                con = smb_login(args, loggers, target, db_obj, lockout)
-
-            status = ''
-            if con.admin:
-                status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
-            elif con.auth and args.user:
-                status = "({})".format(highlight('Success', 'green'))
-            elif args.user:
-                status = "({})".format(highlight('Failed', 'red'))
-
-            loggers['console'].info([con.host, con.ip, "ENUM", "{} {} ".format(con.os,con.os_arch), "(Domain: {})".format(con.srvdomain), "(Signing: {})".format(str(con.signing)), "(SMBv1: {})".format(str(con.smbv1)), status])
-
-        except:
+                con = smb_login(args, loggers, target, db_obj, lockout, config_obj)
+        except Exception as e:
+            loggers['console'].debug([target, target, "ENUM", highlight(str(e), 'red')])
             return []
 
         shares = []
@@ -213,6 +227,7 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
             if args.execute:
                 con.admin = True # Override admin to allow execution
                 code_execution(con, args, target, loggers, config_obj, args.execute)
+            return []
         elif con.auth:
             # Sharefinder
             if args.share:

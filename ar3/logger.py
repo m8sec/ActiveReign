@@ -41,10 +41,11 @@ class AR3Adapter(logging.LoggerAdapter):
     __FORMATTER = {
         0: '{:<28}',  # Hostname
         1: '{:<16}',  # IP
-        2: '{:<28} ',  # Data label
+        2: '{:<28} ', # Data label
         3: '{:<57}',  # os/data
         4: '{:<17}',  # Domain/data cont.
         5: '{:<17}',  # Signing
+        6: '{:<14}',  # SMBv1
     }
 
     def __init__(self, logger_name='ar3'):
@@ -58,9 +59,9 @@ class AR3Adapter(logging.LoggerAdapter):
         for value in data:
             try:
                 if spacer == 2:
-                    tmp_data += self.__FORMATTER[spacer].format(highlight(value))
+                    tmp_data += (self.__FORMATTER[spacer].format(highlight(value, color='blue', style='bold')) + ' ')
                 else:
-                    tmp_data += self.__FORMATTER[spacer].format(value)
+                    tmp_data += (self.__FORMATTER[spacer].format(value) + ' ')
             except Exception as e:
                 tmp_data += '{} '.format(value)
             spacer += 1
