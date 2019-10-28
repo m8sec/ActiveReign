@@ -32,14 +32,10 @@ def smb_login(args, loggers, host, db, lockout_obj, config_obj):
         smb.host_info()
         try:
             smb.login()
-
-            # Modify login status
             if smb.admin:
                 status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
             elif smb.auth and args.user:
                 status = "({})".format(highlight('Success', 'green'))
-
-
         except Exception as e:
             e = str(e).lower()
             lockout_obj.failed_login(host, str(e).lower())
@@ -50,26 +46,33 @@ def smb_login(args, loggers, host, db, lockout_obj, config_obj):
                 status = "({})".format(highlight('Failed', 'red'))
             elif "account_disabled" in e:
                 status = "({})".format(highlight('Account_Disabled', 'red'))
-
         loggers['console'].info([smb.host, smb.ip, "ENUM", "{} {} ".format(smb.os, smb.os_arch), "(Domain: {})".format(smb.srvdomain),"(Signing: {})".format(str(smb.signing)), "(SMBv1: {})".format(str(smb.smbv1)), status])
         return smb
-
     else:
         raise Exception('Connection to Server Failed')
 
 
 def ssh_login(args, loggers, host, db, lockout_obj, config_obj):
-    try:
-        con = SSH(args, loggers, host, db)
-        con.create_ssh_con()
-        con.host_info()
-        con.isAdmin()
-        con.signing = 'N/A'
-        con.smbv1   = 'N/A'
-        return con
-    except Exception as e:
-        lockout_obj.failed_login(host, str(e))
-        return False
+    status = ''
+    ssh = SSH(args, loggers, host, db)
+    if ssh.ssh_connection():
+        ssh.host_info()
+        try:
+            ssh.login()
+            if ssh.admin:
+                status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
+            elif ssh.auth and args.user:
+                status = "({})".format(highlight('Success', 'green'))
+        except Exception as e:
+            e = str(e).lower()
+            if "authentication failed." in e and args.user:
+                status = "({})".format(highlight('Failed', 'red'))
+            elif "bad authentication type" in e and args.user:
+                status = "({})".format(highlight('Bad_Auth_Type', 'red'))
+        loggers['console'].info([ssh.host, ssh.ip, "ENUM", ssh.version, status])
+        return ssh
+    else:
+        raise Exception('Connection to Server Failed')
 
 
 def password_policy(con, args, db_obj, loggers):
@@ -223,7 +226,7 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
             return []
 
         shares = []
-        if args.exec_method == 'ssh':
+        if args.exec_method == 'ssh' and con.auth:
             if args.execute:
                 con.admin = True # Override admin to allow execution
                 code_execution(con, args, target, loggers, config_obj, args.execute)

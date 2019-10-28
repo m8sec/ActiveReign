@@ -7,20 +7,25 @@ from ar3.core.connector import Connector
 class SSH():
     def __init__(self,args, loggers, host, db):
         Connector.__init__(self, args, loggers, host)
-        self.admin  = False
-        self.port   = 22
-        self.key    = False
+        self.admin   = False
+        self.port    = 22
+        self.key     = False
+        self.signing = 'N/A'
+        self.smbv1   = 'N/A'
+        self.auth    = False
 
-    def create_ssh_con(self):
+    def login(self):
         # Connection
         if self.ssh_connection():
             try:
+
                 # Authentication
                 if self.key:
                     self.auth_key()
                 else:
                     self.auth_password()
-                self.host_info()
+                self.auth = True
+                self.isAdmin()
             except Exception as e:
                 raise Exception(str(e))
         else:
@@ -49,10 +54,7 @@ class SSH():
         self.con.connect(hostname=self.host, port=self.port, username=self.username, key_filename=self.key, timeout=self.timeout)
 
     def host_info(self):
-        self.version    = self.con.get_transport().remote_version
-        self.srvdomain  = self.execute('hostname')
-        self.host       = self.srvdomain
-        self.os         = self.execute('uname -mrs') + "/"+self.version
+        self.version = self.con.get_transport().remote_version
 
     def execute(self, command):
         self.__outputBuffer = ''
