@@ -132,6 +132,9 @@ class SmbCon(Connector):
 
         self.db.update_host(self.host, self.ip, self.domain, self.os, self.signing)
 
+        if self.args.gen_relay_list and not self.signing:
+            self.loggers['relay_list'].info(self.ip)
+
     def get_os_arch(self):
         # Credit: https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/protocols/smb.py
         # Credit: https://github.com/SecureAuthCorp/impacket/blob/impacket_0_9_19/examples/getArch.py

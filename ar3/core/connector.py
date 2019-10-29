@@ -6,6 +6,7 @@ class Connector():
         self.nthash     = ''
 
         # Loggers
+        self.loggers    = loggers
         self.logger     = loggers['console']
         self.filer      = loggers[args.mode]
 

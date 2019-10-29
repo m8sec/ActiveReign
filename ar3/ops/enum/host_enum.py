@@ -242,8 +242,6 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
                 shares = share_finder(con, args, loggers, target)
 
             # Secondary actions
-            if args.gen_relay_list and not con.signing:
-                loggers['relay_list'].info(con.ip)
             if args.passpol:
                 password_policy(con, args, db_obj, loggers)
             if args.sam:
