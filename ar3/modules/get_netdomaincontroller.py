@@ -11,8 +11,8 @@ class GetNetDomainController():
 
     def run(self, target, args, smb_con, loggers, config_obj):
         logger = loggers['console']
+        x = LdapCon(args, loggers, args.ldap_srv, smb_con.db)
         try:
-            x = LdapCon(args.user, args.passwd, args.hash, args.domain, args.ldap_srv, args.timeout)
             x.create_ldap_con()
             dc_data = x.custom_query('(userAccountControl:1.2.840.113556.1.4.803:=8192)', ATTRIBUTES['cpu'])
             x.close()

@@ -133,7 +133,12 @@ class SmbCon(Connector):
         if arch != 0:
             self.os_arch = " x{}".format(str(arch))
 
-        self.db.update_host(self.host, self.ip, self.domain, self.os, self.signing)
+        if self.con.getServerDNSDomainName():
+            domain = self.con.getServerDNSDomainName()
+        else:
+            domain = self.ip
+
+        self.db.update_host(self.host, self.ip, domain, self.os, self.signing)
 
         if self.args.gen_relay_list and not self.signing:
             self.loggers['relay_list'].info(self.ip)
@@ -307,10 +312,10 @@ class SmbCon(Connector):
             if ntds_hash.find('$') == -1:
                 if "CLEARTEXT" in ntds_hash:
                     try:
-                        add_ntds_hash.clear_text += 1
                         username, password = ntds_hash.split(":CLEARTEXT:")
+                        add_ntds_hash.clear_text += 1
                         domain, username = username.split("\\")
-                        self.db.update_user(username, '', domain, password)
+                        self.db.update_user(username, password, domain, '')
                         add_ntds_hash.added_to_db += 1
                     except:
                         self.logger.fail("Error adding clear text cred to db: {}".format(ntds_hash))
@@ -355,7 +360,7 @@ class SmbCon(Connector):
                                   justUser=None, printUserStatus=False,
                                   perSecretCallback=lambda secretType, secret: add_ntds_hash(secret))
 
-                self.logger.info([self.host, self.ip, "NTDS", 'Dumping NTDS.dit, this could take a minute'])
+                self.logger.info([self.host, self.ip, "NTDS", 'Extracting NTDS.dit, this could take a minute'])
                 NTDS.dump()
 
                 self.logger.success([self.host, self.ip, "NTDS", '{} hashes and {} passwords collected'.format(add_ntds_hash.ntds_hashes, add_ntds_hash.clear_text)])
@@ -369,9 +374,10 @@ class SmbCon(Connector):
 
         try:
             self.remote_ops.finish()
-            NTDS.finish()
+
         except Exception as e:
             self.logger.debug(["NTDS", "Error calling remote_ops.finish(): {}".format(e)])
+        NTDS.finish()
 
     ################################
     # File Interaction

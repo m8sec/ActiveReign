@@ -29,7 +29,7 @@ class GetLockedAccounts():
 
         try:
             # Create LDAP Con
-            x = LdapCon(args.user, args.passwd, args.hash, args.domain, self.args['SERVER']['Value'], args.timeout)
+            x = LdapCon(args, loggers, args.ldap_srv, smb_con.db)
             x.create_ldap_con()
             if not x:
                 logger.fail([smb_con.host, smb_con.ip, self.name.upper(), 'Unable to create LDAP connection'])
