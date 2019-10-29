@@ -160,8 +160,8 @@ class SmbCon(Connector):
             return 0
 
     def get_hostname(self):
-        if self.con.getServerDNSDomainName():
-            return (self.con.getServerName() + "." + self.con.getServerDNSDomainName())
+        if self.con.getServerDNSDomainName() and (self.con.getServerName().lower() != self.con.getServerDNSDomainName().lower()):
+                return (self.con.getServerName() + "." + self.con.getServerDNSDomainName())
         else:
             return self.con.getServerName()
 
