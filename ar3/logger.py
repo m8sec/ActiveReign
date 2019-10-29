@@ -43,7 +43,7 @@ class AR3Adapter(logging.LoggerAdapter):
         1: '{:<16}',  # IP
         2: '{:<28} ', # Data label
         3: '{:<57}',  # os/data
-        4: '{:<17}',  # Domain/data cont.
+        4: '{:<20}',  # Domain/data cont.
         5: '{:<17}',  # Signing
         6: '{:<14}',  # SMBv1
     }

@@ -121,10 +121,13 @@ class SmbCon(Connector):
             if "STATUS_ACCESS_DENIED" in e.getErrorString():
                 pass
 
-        self.srvdomain  = self.get_domain()
+        self.srvdomain  = self.con.getServerDomain()
         self.host       = self.get_hostname()
         self.os         = self.con.getServerOS()
         self.signing    = self.con.isSigningRequired()
+
+        if not self.srvdomain:
+            self.srvdomain = self.con.getServerName()
 
         arch = self.get_os_arch()
         if arch != 0:
@@ -157,19 +160,11 @@ class SmbCon(Connector):
             return 0
 
     def get_hostname(self):
-        if self.con.getServerDNSDomainName() and not self.local_auth:
-            if self.con.getServerName().lower() != self.con.getServerDNSDomainName().lower():
-                return (self.con.getServerName() + "." + self.con.getServerDNSDomainName())
-            else:
-                return self.con.getServerName()
+        if self.con.getServerDNSDomainName():
+            return (self.con.getServerName() + "." + self.con.getServerDNSDomainName())
         else:
             return self.con.getServerName()
 
-    def get_domain(self):
-        try:
-            return self.con.getServerDomain()
-        except:
-            return self.getServerName()
 
     def list_shares(self):
         # name=share['shi1_netname'][:-1], description=share['shi1_remark']
