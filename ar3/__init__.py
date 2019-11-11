@@ -21,7 +21,7 @@ from ar3.ops.query.arg_parser import query_args, query_arg_mods
 from ar3.ops.shell.arg_parser import shell_args, shell_arg_mods
 
 def banner():
-    VERSION = "v1.0.4"
+    VERSION = "v1.0.5"
     BANNER = """  
 
                                    _____                  

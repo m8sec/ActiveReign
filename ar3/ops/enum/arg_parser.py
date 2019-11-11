@@ -102,7 +102,7 @@ def enum_arg_mods(args, db_obj, loggers):
         args.passwd = getpass("Enter password, or continue with null-value: ")
 
     # Cred ID present & no user/pass provided, for us in enumeration
-    elif args.cred_id and not args.user:
+    elif args.cred_id and "-u" not in argv:
         enum_user = db_obj.extract_user(args.cred_id)
         args.user    = enum_user[0][0]
         args.passwd  = enum_user[0][1]
