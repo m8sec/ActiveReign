@@ -13,6 +13,7 @@ class IronKatz():
         self.author         = ['@m8r0wn']
         self.credit         = ['@byt3bl33d3r', '@harmj0y']
         self.requires_admin = True
+        self.exec_methods   = ['wmiexec', 'smbexec']
         self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):

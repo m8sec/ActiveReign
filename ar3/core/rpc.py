@@ -64,9 +64,9 @@ class RpcCon(Connector):
         resp = scmr.hREnumServicesStatusW(self.rpc_connection, scManagerHandle)
         for i in range(len(resp)):
             name = resp[i]['lpServiceName'][:-1]
-            services[name]             = {}
-            services[name]['Name']     = name
-            services[name]['Display']  = resp[i]['lpDisplayName'][:-1]
+            services[name]              = {}
+            services[name]['Name']      = name
+            services[name]['Display']   = resp[i]['lpDisplayName'][:-1]
 
             state = resp[i]['ServiceStatus']['dwCurrentState']
             if state == scmr.SERVICE_CONTINUE_PENDING:
@@ -85,6 +85,7 @@ class RpcCon(Connector):
                 services[name]['Status'] = "STOPPED"
             else:
                 services[name]['Status'] = "UNKNOWN"
+
         self.rpc_connection.disconnect()
         return services
 
@@ -110,16 +111,15 @@ class RpcCon(Connector):
         self.create_rpc_con(r'\wkssvc')
         try:
             resp = wkst.hNetrWkstaUserEnum(self.rpc_connection, 1)
-        except DCERPCException:
+        except DCERPCException as e:
             return list()
 
         results = list()
         for wksta_user in resp['UserInfo']['WkstaUserInfo']['Level1']['Buffer']:
-
-                self.loggedon[wksta_user['wkui1_username'].strip('\x00')] = {
-                                        'domain'    : wksta_user['wkui1_logon_domain'].strip('\x00'),
-                                        'logon_srv' : wksta_user['wkui1_logon_server'].strip('\x00'),
-                                        'user'      : wksta_user['wkui1_username'].strip('\x00'),
-                                    }
+            self.loggedon[wksta_user['wkui1_username'].strip('\x00')] = {
+                                    'domain'    : wksta_user['wkui1_logon_domain'].strip('\x00'),
+                                    'logon_srv' : wksta_user['wkui1_logon_server'].strip('\x00'),
+                                    'user'      : wksta_user['wkui1_username'].strip('\x00'),
+                                }
 
         self.rpc_connection.disconnect()

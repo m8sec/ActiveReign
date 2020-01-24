@@ -37,6 +37,7 @@ class Connector():
                 self.lmhash, self.nthash = self.hash.split(':')
             except:
                 self.nthash = self.hash
+            self.password = ''
 
         # Vars displayed during enumeration, populated by class obj
         self.os         = ''

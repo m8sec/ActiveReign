@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='ActiveReign',
-    version='1.0.5dev',
+    version='1.0.5',
     author = 'm8r0wn',
     author_email = 'm8r0wn@protonmail.com',
     description = 'A network enumeration and attack toolset',
@@ -21,12 +21,14 @@ setup(
                     'bs4',
                     'pysmb',
                     'pywinrm',
+                    'pypykatz',
                     'requests',
                     'openpyxl',
                     'paramiko',
                     'python-docx',
                     'terminaltables',
                     'ipparser>=0.3.5',
+                    'minidump',
     ],
     classifiers = [
                     "Environment :: Console",

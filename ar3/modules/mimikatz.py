@@ -12,6 +12,7 @@ class InvokeMimikatz():
         self.description    = 'Execute PowerSpoits Invoke-Mimikatz.ps1'
         self.author         = ['@m8r0wn']
         self.requires_admin = True
+        self.exec_methods   = ['wmiexec', 'smbexec']
         self.args = {
             'COMMAND': {
                 'Description': 'Mimikatz Command to Run',

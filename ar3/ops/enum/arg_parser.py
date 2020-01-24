@@ -1,3 +1,4 @@
+import os
 import argparse
 from sys import argv, exit
 from getpass import getpass
@@ -5,6 +6,8 @@ from ipparser import ipparser
 
 from ar3.core.ldap import LdapCon
 from ar3.modules import list_modules
+from ar3.helpers.misc import file_exists
+from ar3.modules import get_module_resources
 
 def enum_args(sub_parser):
     enum_parser = sub_parser.add_parser("enum", help='- System enumeration & Module execution')
@@ -12,7 +15,7 @@ def enum_args(sub_parser):
     if "-L" in argv:
         list_modules()
         exit(0)
-    enum_parser.add_argument('-t', dest='timeout', type=int, default=5,help='Connection timeout')
+    enum_parser.add_argument('-t', dest='timeout', type=int, default=12,help='Connection timeout')
     enum_parser.add_argument('--refresh', dest="refresh", action='store_true', help="Download/update PowerShell scripts")
     enum_parser.add_argument('--gen-relay-list', dest='gen_relay_list', type=str, default='', help='Create a file of all hosts that dont require SMB signing')
 
@@ -52,6 +55,7 @@ def enum_args(sub_parser):
     modules.add_argument('-M', dest='module', type=str, default='', help='Use AR3 module')
     modules.add_argument('-o', dest='module_args', type=str, default='', help='Provide AR3 module arguments')
     modules.add_argument('-L', dest='list_modules', type=str, default='', help='List all available modules')
+    modules.add_argument('--reload', dest='module_reload', action='store_true', help='ReDownload module resources')
 
     spider = enum_parser.add_argument_group("Spidering")
     spider.add_argument('--spider', dest='spider', action='store_true',help='Crawl file share and look for sensitive info')
@@ -96,6 +100,18 @@ def enum_arg_mods(args, db_obj, loggers):
          hash       = False,
          domain     = False,
         )
+
+    # Check for user creds in db, QoL addition
+    cred_id = db_obj.extract_credID(args.user, args.domain, args.passwd, args.hash)
+    if cred_id:
+        logger.status(['Credentials Saved', 'Next time try: -id {}'.format(str(cred_id))])
+
+    # ReDownload module resources
+    if args.module_reload:
+        logger.status('Reloading module resources...')
+        get_module_resources()
+        logger.status_success('Scripts updated at: {}'.format(os.path.join(os.path.expanduser('~'), '.ar3', 'scripts')))
+        exit(0)
 
     # Ask user for creds if user present and no password
     if not args.passwd and args.user and not args.hash:

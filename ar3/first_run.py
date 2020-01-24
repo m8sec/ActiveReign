@@ -23,13 +23,13 @@ def first_run(logger):
         if not os.path.exists(DIR):
             os.makedirs(DIR)
 
-    logger.status('Downloading PS1 scripts from source links')
+    logger.status('Downloading module resources from source')
     get_module_resources()
 
     logger.status("Cloning default config file to ~/.ar3/config.json")
     copyfile('ar3/config.json',LOG_DIR + "/config.json")
 
-    logger.status("Initial setup complete! Thank you <3")
+    logger.status("Initial setup complete, thank you!")
 
 def first_workspace_check(workspace, logger):
     if not os.path.exists(os.path.join(os.path.expanduser('~'), '.ar3', 'workspaces', workspace)):

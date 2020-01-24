@@ -65,7 +65,6 @@ def user_handler(args, logger, host, ip, user, data):
 def group_query_all(args, query, loggers, db_obj):
     # Enumerate all groups and users on the domain
     for group in query.con.group_query([]).keys():
-        query.create_ldap_con()
         group_query(args, query.con, loggers, db_obj, group_lookup=group)
 
 def group_query(args, query, loggers, db_obj, group_lookup=False):
@@ -238,9 +237,16 @@ def recon(args, query, loggers, db_obj):
     """
     query.create_ldap_con()
     domain_query(args, query.con, loggers, db_obj)
+    query.close()
+
     query.create_ldap_con()
     user_query(args, query.con, loggers, db_obj, user_lookup="{active}")
+    query.close()
+
+    query.create_ldap_con()
     group_query_all(args, query, loggers, db_obj)
+    query.close()
+
     query.create_ldap_con()
     computer_query(args, query.con, loggers, db_obj)
 
@@ -325,7 +331,7 @@ def main(args, config_obj, db_obj, loggers):
 
         if args.custom:
             query.create_ldap_con()
-            custom_query(args, args.query, args.attrs, query.con, loggers, db_obj)
+            custom_query(args, args.custom, args.attrs, query.con, loggers, db_obj)
 
         query.close()
     except Exception as e:

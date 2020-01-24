@@ -18,6 +18,8 @@ MODULES = {
     'get_lockedaccounts'      : {'Class' : 'GetLockedAccounts'},
     'wifi_passwords'          : {'Class' : 'WifiPasswords'},
     'gpp_password'            : {'Class' : 'GPP_Password'},
+    'kill_defender'           : {'Class' : 'KillDefender'},
+    'wdigest'                 : {'Class' : 'Wdigest'},
 
     'mimikatz'                : {'Class' : 'InvokeMimikatz',
                                  'File'  : 'Invoke-Mimikatz.ps1',
@@ -34,6 +36,10 @@ MODULES = {
     'invoke_vnc'              : {'Class' : 'InvokeVNC',
                                  'File'  : 'Invoke-Vnc.ps1',
                                  'URL'   : 'https://raw.githubusercontent.com/EmpireProject/Empire/master/data/module_source/management/Invoke-Vnc.ps1'},
+
+    'procdump'                : {'Class' : 'ProcDump',
+                                 'File'  : 'procdump.exe',
+                                 'URL'   : 'https://live.sysinternals.com/procdump.exe'},
 }
 
 def list_modules():
@@ -82,8 +88,9 @@ def get_module_resources():
     for module, data in MODULES.items():
         if 'URL' in data.keys() :
             src = os.path.join(os.path.expanduser('~'), '.ar3', 'scripts', data['File'])
-            if not os.path.exists(src):
-                download_file(data['URL'], src)
+            if os.path.exists(src):
+                os.remove(src)
+            download_file(data['URL'], src)
 
 def download_file(source, output):
     f = open(output, 'wb+')

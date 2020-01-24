@@ -9,6 +9,7 @@ class InvokeVNC():
         self.author         = ['@m8r0wn']
         self.credit         = ['@EmpireProject']
         self.requires_admin = True
+        self.exec_methods   = ['wmiexec', 'smbexec', 'atexec']
         self.args = {
             'CONTYPE'   : {
                 'Description'   : 'Type of payload to use {reverse, bind}',

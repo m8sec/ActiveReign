@@ -10,6 +10,7 @@ class InvokeKerberoast():
         self.author         = ['@m8r0wn']
         self.credit         = ['@EmpireProject']
         self.requires_admin = True
+        self.exec_methods   = ['wmiexec', 'smbexec', 'atexec']
         self.args           = {}
 
     def run(self, target, args, smb_con, loggers, config_obj):

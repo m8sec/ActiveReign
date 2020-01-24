@@ -2,7 +2,6 @@ import threading
 from impacket.smb3structs import FILE_READ_DATA
 
 from ar3.core.smb import SmbCon
-from ar3.logger import highlight
 from ar3.pysmb.smb import smb_connect
 from ar3.helpers.remotefile import RemoteFile
 from ar3.ops.enum.file_parser.parse_docx import parse_docx

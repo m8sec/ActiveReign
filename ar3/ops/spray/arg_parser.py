@@ -1,3 +1,4 @@
+from sys import argv
 from ipparser import ipparser
 from argparse import Namespace
 
@@ -32,8 +33,9 @@ def spray_args(sub_parser):
     sp_pwd.add_argument('-H','-hashes', dest='hash', type=str, default='', help='Use Hash for authentication')
 
     # Domain
-    spray_parser.add_argument('-d', dest='domain', type=str, default='', help='Set domain')
-    spray_parser.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
+    spray_domain = spray_parser.add_mutually_exclusive_group(required=True)
+    spray_domain.add_argument('-d', dest='domain', type=str, default='', help='Set domain')
+    spray_domain.add_argument('--local-auth', dest='local_auth', action='store_true', help='Authenticate to target host, no domain')
 
     # Timing options
     spray_parser.add_argument('-j', dest='jitter', type=float, default=0, help='jitter (sec)')
@@ -52,6 +54,10 @@ def spray_args(sub_parser):
 
 def spray_arg_mods(args, db_obj, loggers):
     logger = loggers['console']
+
+    # Modify Max Threads, unless modified by user
+    if '-T' not in argv:
+        args.max_threads = 5
 
     if not args.passwd:
         args.passwd = ['']
@@ -121,21 +127,23 @@ def spray_arg_mods(args, db_obj, loggers):
                             lockout_threshold = int(tmp[list(tmp.keys())[0]]['lockoutThreshold'])
                             logger.status_success("Domain lockout threshold detected: {}\t Logon_Server: {}".format(lockout_threshold, l.host))
                         except:
+                            # go through iteration: look for arg, checkdb, use default
                             logger.status_fail('Lockout threshold failed, using default threshold of {}'.format(args.default_threshold))
                             lockout_threshold=args.default_threshold
 
                         # Compare and create user list
                         for user, data in tmp_users.items():
                             try:
-
-                                # Remove query user from list
                                 if user.lower() == context.user.lower():
-                                    logger.status_success2("Removed User: {} (Query User)".format(context.user))
-                                # Compare badpwd count + create new list
-                                if int(data['badPwdCount']) < (lockout_threshold - 1):
-                                    users.append(user)
+                                    logger.status_success2(["Removed User: {}".format(context.user), "(Query User)"])
+
+                                elif db_obj.pwd_check(context.domain.lower(), user.lower()):
+                                    logger.status_success2(["Removed User: {}".format(user), "(Pwd Known)"])
+
+                                elif int(data['badPwdCount']) >= (lockout_threshold - 1):
+                                    logger.status_success2(["Removed User: {}".format(user), "(BadPwd: {})".format(data['badPwdCount'])])
                                 else:
-                                    logger.status_success2("Removed User: {} (BadPwd: {})".format(user, data['badPwdCount']))
+                                    users.append(user)
                             except:
                                 # no badPwdCount value exists
                                 users.append(user)

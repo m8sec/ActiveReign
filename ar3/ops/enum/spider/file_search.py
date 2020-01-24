@@ -15,6 +15,7 @@ class SearchThread(threading.Thread):
         self.start_path     = args.start_path
         self.whitelist_ext  = config.WHITELIST_EXT
         self.blacklist_dir  = config.BLACKLIST_DIR
+        self.loggers        = loggers
 
         self.smbcon = SmbCon(args, loggers, target, db)
         self.smbcon.create_smb_con()
@@ -38,12 +39,17 @@ class SearchThread(threading.Thread):
                 except:
                     filename = x.get_longname()
 
+                # Quick fix for gpp passwords on 2019 DC's @TODO create perm fix
+                if filename.lower() == "groups":
+                    filename = "Groups.xml"
+
                 if filename not in ['.','..']:
                     # If DIR, use recursion to keep searching until max depth hit
                     if x.is_directory() and path.count("/") <= self.max_depth:
                         full_path = path + filename + "/"
                         # Verify not on blacklist
                         if full_path not in self.blacklist_dir:
+                            self.loggers['console'].debug("Spider-DIR: {}".format(full_path))
                             self.recursion(full_path)
 
                     # Check for valid file ext before adding to queue
@@ -56,6 +62,7 @@ class SearchThread(threading.Thread):
                             'path'     : path,
                             'filename' : filename
                         }
+                        self.loggers['console'].debug("Spider-File: {}".format(tmp['filename']))
                         self.file_queue.append(tmp)
                         del tmp
         except:

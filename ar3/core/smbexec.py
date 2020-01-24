@@ -129,12 +129,7 @@ class SMBEXEC():
             self.get_output_fileless()
         else:
             self.get_output()
-            # Delete tmp files on system
-            self.logger.debug('Removing: {}'.format(self.outfile))
-            self.smbcon.con.deleteFile(self.share, "{}{}".format(self.path.replace('\\','/'), self.outfile))
-            self.logger.debug('Removing: {}'.format(self.batchFile))
-            # Delete Batch File on System
-            self.smbcon.con.deleteFile(self.share, "{}{}".format(self.path.replace('\\','/'), self.batchFile))
+            self.cleanup()
 
         # Cleanup and return data
         self.finish()
@@ -172,6 +167,19 @@ class SMBEXEC():
                 break
             except IOError:
                 sleep(2)
+
+    def cleanup(self):
+        try:
+            self.smbcon.con.deleteFile(self.share, "{}{}".format(self.path.replace('\\', '/'), self.outfile))
+            self.logger.debug('Deleted output file: \\\\{}\\{}{}'.format(self.ip, self.share, self.path + self.outfile))
+        except:
+            pass
+
+        try:
+            self.smbcon.con.deleteFile(self.share, "{}{}".format(self.path.replace('\\', '/'), self.batchFile))
+            self.logger.debug('Deleted batch file: \\\\{}\\{}{}'.format(self.ip, self.share, self.path + self.batchFile))
+        except:
+            pass
 
     def finish(self):
         # Just in case the service is still created

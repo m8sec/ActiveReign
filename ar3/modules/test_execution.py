@@ -12,6 +12,7 @@ class TestExecution():
         self.description = 'Use on single system with known admin privileges to determine optimal execution method'
         self.author         = ['@m8r0wn']
         self.requires_admin = True
+        self.exec_methods   = ['wmiexec', 'smbexec', 'atexec', 'winrm']
         self.args           = {}
 
     def test_execution(self, args, smb_con, target, exec_method, exec_type, logger):

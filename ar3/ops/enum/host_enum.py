@@ -46,6 +46,8 @@ def smb_login(args, loggers, host, db, lockout_obj, config_obj):
                 status = "({})".format(highlight('Failed', 'red'))
             elif "account_disabled" in e:
                 status = "({})".format(highlight('Account_Disabled', 'red'))
+            elif args.user:
+                status = "({})".format(highlight(e[:40], 'red'))
         loggers['console'].info([smb.host, smb.ip, "ENUM", "{} {} ".format(smb.os, smb.os_arch), "(Domain: {})".format(smb.srvdomain),"(Signing: {})".format(str(smb.signing)), "(SMBv1: {})".format(str(smb.smbv1)), status])
         return smb
     else:
@@ -53,11 +55,11 @@ def smb_login(args, loggers, host, db, lockout_obj, config_obj):
 
 
 def ssh_login(args, loggers, host, db, lockout_obj, config_obj):
-    status = ''
-    ssh = SSH(args, loggers, host, db)
+    status  = ''
+    ssh     = SSH(args, loggers, host, db)
     if ssh.ssh_connection():
-        ssh.host_info()
         try:
+            ssh.host_info()
             ssh.login()
             if ssh.admin:
                 status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
@@ -149,7 +151,7 @@ def extract_ntds(con, args, target, loggers):
     loggers[args.mode].info("Dumping NTDS.DIT\t{}\t{}\\{}".format(target, args.domain, args.user))
     con.ntds()
 
-
+@requires_admin
 def loggedon_users(con, args, target, loggers):
     x = RpcCon(args, loggers, target)
     x.get_netloggedon()
@@ -170,7 +172,7 @@ def tasklist(con, args, loggers):
     proc = WmiCon(args, loggers, con.ip, con.host)
     proc.get_netprocess(tasklist=True)
 
-
+@requires_admin
 def list_services(con, args, loggers, target):
     x = RpcCon(args, loggers, target)
     for key,svc in x.list_services().items():
@@ -200,10 +202,14 @@ def execute_module(con, args, target, loggers, config_obj):
         return
     try:
         module_class = get_module_class(args.module)
-        class_obj = module_class()
-        # Admin check for module
+        class_obj    = module_class()
+
+        # Module Checks: Admin privs required and exec method used
         if class_obj.requires_admin and not con.admin:
-            loggers['console'].warning([con.host, con.ip, args.module.upper(),"{} requires administrator access".format(args.module)])
+            loggers['console'].fail([con.host, con.ip, args.module.upper(),"{} requires administrator access".format(args.module)])
+            return
+        elif class_obj.exec_methods and args.exec_method not in class_obj.exec_methods:
+            loggers['console'].fail([con.host, con.ip, args.module.upper(), "Current execution method ({}) not supported".format(args.exec_method)])
             return
 
         populate_mod_args(class_obj, args.module_args, loggers['console'])
@@ -271,22 +277,23 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
             if args.module:
                 execute_module(con, args, target, loggers, config_obj)
 
-        # Close connections & return
+        loggers['console'].debug("Shares returned for: {} {}".format(target, shares))
+        return shares
+
+    except KeyboardInterrupt:
+        _exit(0)
+
+    except Exception as e:
+        loggers['console'].debug(str(e))
+
+    finally:
         try:
             con.con.logoff()
         except:
             pass
 
-        con.close()
-        loggers['console'].debug("Shares returned for: {} {}".format(target, shares))
-        return shares
-
-    except KeyboardInterrupt:
         try:
+
             con.close()
         except:
             pass
-        _exit(0)
-
-    except Exception as e:
-        loggers['console'].debug(str(e))

@@ -35,8 +35,7 @@ class LdapCon(Connector):
         try:
             self.con = ldap.LDAPConnection("ldap://{}".format(self.ip))
             return True
-        except Exception as e:
-            print(e)
+        except:
             return False
 
     def ldaps_con(self):
@@ -44,8 +43,7 @@ class LdapCon(Connector):
             self.con = ldap.LDAPConnection("ldaps://{}".format(self.ip))
             self.ldaps = True
             return True
-        except Exception as e:
-            print(e)
+        except:
             return False
 
     ##################################################

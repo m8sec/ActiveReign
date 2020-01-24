@@ -2,37 +2,37 @@ from sqlite3 import connect
 from os import remove, path
 
 class Ar3db():
-    __sql_create_domains = ('CREATE TABLE IF NOT EXISTS DOMAINS (DOMAINID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                            'NAME TEXT NOT NULL,'
-                            'LOCKOUT_THRESHOLD INTEGER,'
-                            'LOCKOUT_DURATION TEXT,'
-                            'MIN_PWD_LENGTH INTEGER,'
-                            'MAX_PWD_AGE TEXT);')
+    __sql_create_domains      = ('CREATE TABLE IF NOT EXISTS DOMAINS (DOMAINID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                 'NAME TEXT NOT NULL,'
+                                 'LOCKOUT_THRESHOLD INTEGER,'
+                                 'LOCKOUT_DURATION TEXT,'
+                                 'MIN_PWD_LENGTH INTEGER,'
+                                 'MAX_PWD_AGE TEXT);')
 
-    __sql_create_hosts = ('CREATE TABLE IF NOT EXISTS HOSTS (HOSTID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                          'HOSTNAME TEXT,'
-                          'IP TEXT,'
-                          'DOMAIN TEXT,'
-                          'OS TEXT,'
-                          'SIGNING BOOL);')
+    __sql_create_hosts        = ('CREATE TABLE IF NOT EXISTS HOSTS (HOSTID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                 'HOSTNAME TEXT,'
+                                 'IP TEXT,'
+                                 'DOMAIN TEXT,'
+                                 'OS TEXT,'
+                                 'SIGNING BOOL);')
 
-    __sql_create_users = ('CREATE TABLE IF NOT EXISTS USERS (USERID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                          'USERNAME TEXT NOT NULL,'
-                          'PASSWORD TEXT,'
-                          'DOMAIN TEXT,'
-                          'HASH TEXT);')
+    __sql_create_users        = ('CREATE TABLE IF NOT EXISTS USERS (USERID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                 'USERNAME TEXT NOT NULL,'
+                                 'PASSWORD TEXT,'
+                                 'DOMAIN TEXT,'
+                                 'HASH TEXT);')
 
-    __sql_create_admin = ('CREATE TABLE IF NOT EXISTS ADMINS (ADMINID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                          'HOSTID INTEGER NOT NULL,'
-                          'USERID INTEGER NOT NULL);')
+    __sql_create_admin        = ('CREATE TABLE IF NOT EXISTS ADMINS (ADMINID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                 'HOSTID INTEGER NOT NULL,'
+                                 'USERID INTEGER NOT NULL);')
 
-    __sql_create_groups = ('CREATE TABLE IF NOT EXISTS GROUPS (GROUPID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                           'DOMAIN TEXT,'
-                           'NAME TEXT NOT NULL);')
+    __sql_create_groups       = ('CREATE TABLE IF NOT EXISTS GROUPS (GROUPID INTEGER PRIMARY KEY AUTOINCREMENT,'
+                                 'DOMAIN TEXT,'
+                                 'NAME TEXT NOT NULL);')
 
     __sql_create_user_members = ('CREATE TABLE IF NOT EXISTS MEMBERS_USERS (MEMBERID INTEGER PRIMARY KEY AUTOINCREMENT,'
-                                  'GROUPID INTEGER NOT NULL,'
-                                  'USERID INTEGER NOT NULL);')
+                                 'GROUPID INTEGER NOT NULL,'
+                                 'USERID INTEGER NOT NULL);')
 
     __sql_create_group_members = ('CREATE TABLE IF NOT EXISTS MEMBERS_GROUPS (MEMBERID INTEGER PRIMARY KEY AUTOINCREMENT,'
                                   'GROUPID INTEGER NOT NULL,'
@@ -94,7 +94,7 @@ class Ar3db():
         con.close()
 
     ###########################
-    # Retrieve ID #
+    # Retrieve Unique ID
     ###########################
     def domain_id(self, con, domain):
         try:
@@ -111,6 +111,12 @@ class Ar3db():
     def user_id(self, con, username, domain):
         try:
             return self.db_exec(con, """SELECT USERID FROM USERS WHERE USERNAME='{}' AND DOMAIN='{}' LIMIT 1;""".format(username, domain))[0][0]
+        except:
+            return False
+
+    def cred_id(self, con, username, domain, password, hash):
+        try:
+            return self.db_exec(con, """SELECT USERID FROM USERS WHERE USERNAME='{}' AND DOMAIN='{}' AND PASSWORD='{}' AND HASH='{}' LIMIT 1;""".format(username, domain, password, hash))[0][0]
         except:
             return False
 
@@ -217,7 +223,7 @@ class Ar3db():
         con.close()
 
     ###########################
-    # General queries
+    # General queries (Returns all data)
     ###########################
     def query_domains(self):
         try:
@@ -282,15 +288,16 @@ class Ar3db():
             self.logger.debug(str(e))
             return [[]]
 
-    def query_spec_host(self, hostid):
+    def query_spec_host(self, search):
         try:
             con = self.db_connect(self.dbname)
-            tmp = self.db_exec(con, """SELECT HOSTS.HOSTID, HOSTS.DOMAIN, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.OS, HOSTS.SIGNING, USERS.USERNAME, USERS.DOMAIN, USERS.PASSWORD, USERS.HASH FROM HOSTS INNER JOIN ADMINS ON HOSTS.HOSTID = ADMINS.HOSTID INNER JOIN USERS ON USERS.USERID = ADMINS.USERID WHERE HOSTS.HOSTID = '{}';""".format(hostid))
+            tmp = self.db_exec(con, """SELECT HOSTS.HOSTID, HOSTS.DOMAIN, HOSTS.HOSTNAME, HOSTS.IP, HOSTS.OS, HOSTS.SIGNING, USERS.USERNAME, USERS.DOMAIN, USERS.PASSWORD, USERS.HASH FROM HOSTS INNER JOIN ADMINS ON HOSTS.HOSTID = ADMINS.HOSTID INNER JOIN USERS ON USERS.USERID = ADMINS.USERID WHERE {};""".format(search))
             con.close()
             return tmp
         except Exception as e:
             self.logger.debug(str(e))
             return [[]]
+
 
     ###############################
     # Extract value for use in Enum
@@ -306,11 +313,30 @@ class Ar3db():
             return [[]]
 
     def extract_lockout(self, domain):
+        tmp = False
+        con = self.db_connect(self.dbname)
         try:
-            con = self.db_connect(self.dbname)
             id = self.domain_id(con, domain)
             tmp = self.db_exec(con, """SELECT LOCKOUT_THRESHOLD FROM DOMAINS WHERE DOMAINID={} LIMIT 1;""".format(id))[0][0]
-            con.close()
-            return tmp
-        except Exception as e:
-            return False
+        except:
+            pass
+        con.close()
+        return tmp
+
+    def extract_credID(self, username, domain, password, hash):
+        con = self.db_connect(self.dbname)
+        id = self.cred_id(con, username, domain, password, hash)
+        con.close()
+        return id
+
+    def pwd_check(self, domain, username):
+        # Domain pwd spray, check creds dont exist in DB
+        tmp = False
+        con = self.db_connect(self.dbname)
+        try:
+            con = self.db_connect(self.dbname)
+            tmp = self.db_exec(con, """SELECT PASSWORD FROM USERS WHERE DOMAIN='{}' AND USERNAME='{}' LIMIT 1""".format(domain, username))[0][0]
+        except:
+            pass
+        con.close()
+        return tmp

@@ -60,8 +60,13 @@ def validate_ntlm(data):
     else:
         return False
 
-def file_exists(parser, filename):
+def file_exists(parser, filename, contents=True):
     # Used with argparse to check if input files exists
     if not path.exists(filename):
         parser.error("Input file not found: {}".format(filename))
-    return [x.strip() for x in open(filename)]
+    if contents:
+        # return file contents
+        return [x.strip() for x in open(filename)]
+    else:
+        # return status
+        return filename

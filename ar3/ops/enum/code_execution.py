@@ -9,3 +9,4 @@ class ExecutionTimeout():
         while self.running:
             self.result = self.exec_obj.execute(self.command)
             self.running = False
+            return

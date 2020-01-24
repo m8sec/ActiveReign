@@ -1,7 +1,6 @@
 import socket
 import paramiko
 from paramiko.ssh_exception import AuthenticationException, NoValidConnectionsError, SSHException
-
 from ar3.core.connector import Connector
 
 class SSH():
@@ -14,28 +13,10 @@ class SSH():
         self.smbv1   = 'N/A'
         self.auth    = False
 
-    def login(self):
-        # Connection
-        if self.ssh_connection():
-            try:
-
-                # Authentication
-                if self.key:
-                    self.auth_key()
-                else:
-                    self.auth_password()
-                self.auth = True
-                self.isAdmin()
-            except Exception as e:
-                raise Exception(str(e))
-        else:
-            raise Exception("Connection to Server Failed")
-
     def ssh_connection(self):
-        self.con = paramiko.SSHClient()
-        self.con.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
         try:
+            self.con = paramiko.SSHClient()
+            self.con.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             self.con.connect(self.host, port=self.port, timeout=2)
         except AuthenticationException:
             return True
@@ -45,16 +26,42 @@ class SSH():
             return False
         except socket.error:
             return False
+        except:
+            return False
+
+    def login(self):
+        if self.username:
+            if self.key:
+                self.auth_key()
+            else:
+                self.auth_password()
+            if self.auth:
+                self.isAdmin()
 
     def auth_password(self):
-        self.con.connect(self.host, port=self.port, username=self.username, password=self.password)
+        try:
+            self.con.connect(self.ip, port=self.port, username=self.username, password=self.password)
+            self.auth = True
+            return True
+        except Exception as e:
+            return False
 
     def auth_key(self):
-        paramiko.RSAKey.from_private_key_file(self.key)
-        self.con.connect(hostname=self.host, port=self.port, username=self.username, key_filename=self.key, timeout=self.timeout)
+        try:
+            paramiko.RSAKey.from_private_key_file(self.key)
+            self.con.connect(hostname=self.ip, port=self.port, username=self.username, key_filename=self.key, timeout=self.timeout)
+            self.auth = True
+            return True
+        except:
+            return False
 
     def host_info(self):
-        self.version = self.con.get_transport().remote_version
+        try:
+            self.version = self.con.get_transport().remote_version.strip()
+            if not self.version:
+                self.version = 'No Banner'
+        except:
+            self.version = "SSH Banner Failed"
 
     def execute(self, command):
         self.__outputBuffer = ''
@@ -66,11 +73,14 @@ class SSH():
 
 
     def isAdmin(self):
-        stdin, stdout, stderr = self.con.exec_command('echo $EUID')
-        stdin.flush()
-        output = stdout.read().decode('utf-8').strip()
-        if output == '0':
-            self.admin = True
+        try:
+            stdin, stdout, stderr = self.con.exec_command('echo $EUID')
+            stdin.flush()
+            output = stdout.read().decode('utf-8').strip()
+            if output == '0':
+                self.admin = True
+        except:
+            self.admin = False
 
     def close(self):
         self.con.close()

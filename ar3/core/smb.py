@@ -10,7 +10,6 @@ from impacket.smbconnection import SMBConnection, SessionError
 from impacket.dcerpc.v5.transport import DCERPCTransportFactory
 from impacket.examples.secretsdump import RemoteOperations, SAMHashes, NTDSHashes, LSASecrets
 
-from ar3.logger import highlight
 from ar3.helpers import remotefile
 from ar3.core.connector import Connector
 from ar3.ops.enum.polenum import SAMRDump
@@ -51,6 +50,7 @@ class SmbCon(Connector):
         self.isAdmin()
         self.updatedb_user()
 
+
     def updatedb_user(self):
         if self.username and self.password or self.username and self.hash:
             self.db.update_user(self.username, self.password, self.domain, self.hash)
@@ -71,9 +71,12 @@ class SmbCon(Connector):
         except:
             pass
 
-    #########################
+
+    ################################
+    #
     # SMB Connection
-    #########################
+    #
+    ################################
     def smb_connection(self):
         if self.smbv1_con():
             return True
@@ -83,19 +86,23 @@ class SmbCon(Connector):
 
     def smbv1_con(self):
         try:
-            self.con = SMBConnection(self.client, self.host, sess_port=self.port, preferredDialect=SMB_DIALECT, timeout=int(self.timeout))
+            self.con = SMBConnection(self.client, self.ip, sess_port=self.port, preferredDialect=SMB_DIALECT, timeout=int(self.timeout))
             self.smbv1=True
             self.con.setTimeout(self.timeout)
+            self.logger.debug('SMBv1: Connected to: {}'.format(self.ip))
             return True
-        except:
+        except Exception as e:
+            self.logger.debug('SMBv1: Error creating connection to {}: {}'.format(self.host, e))
             return False
 
     def smbv3_con(self):
         try:
-            self.con = SMBConnection(self.client, self.host, sess_port=self.port, timeout=int(self.timeout))
+            self.con = SMBConnection(self.client, self.ip, sess_port=self.port, timeout=int(self.timeout))
             self.con.setTimeout(self.timeout)
+            self.logger.debug('SMBv3: Connected to: {}'.format(self.ip))
             return True
-        except:
+        except Exception as e:
+            self.logger.debug('SMBv3: Error creating connection to {}: {}'.format(self.ip, e))
             return False
 
     #########################
@@ -121,10 +128,10 @@ class SmbCon(Connector):
             if "STATUS_ACCESS_DENIED" in e.getErrorString():
                 pass
 
-        self.srvdomain  = self.con.getServerDomain()
+        self.srvdomain  = self.con.getServerDomain()       # Demo
         self.host       = self.get_hostname()
-        self.os         = self.con.getServerOS()
-        self.signing    = self.con.isSigningRequired()
+        self.os         = self.con.getServerOS()           # Windows 10 Build 17134
+        self.signing    = self.con.isSigningRequired()     # True/False
 
         if not self.srvdomain:
             self.srvdomain = self.con.getServerName()
@@ -138,10 +145,18 @@ class SmbCon(Connector):
         else:
             domain = self.ip
 
+        try:
+            # Log off before attempting new auth
+            self.logoff()
+        except:
+            pass
+
         self.db.update_host(self.host, self.ip, domain, self.os, self.signing)
 
         if self.args.gen_relay_list and not self.signing:
             self.loggers['relay_list'].info(self.ip)
+
+        self.smb_connection()
 
     def get_os_arch(self):
         # Credit: https://github.com/byt3bl33d3r/CrackMapExec/blob/master/cme/protocols/smb.py
@@ -211,22 +226,25 @@ class SmbCon(Connector):
     # Check if User Admin
     ################################
     def isAdmin(self):
-        rpctransport = SMBTransport(self.host, self.port, r'\svcctl', smb_connection=self.con)
-        dce = rpctransport.get_dce_rpc()
         try:
-            dce.connect()
-        except:
-            pass
-        else:
-            dce.bind(scmr.MSRPC_UUID_SCMR)
+            rpctransport = SMBTransport(self.host, self.port, r'\svcctl', smb_connection=self.con)
+            dce = rpctransport.get_dce_rpc()
             try:
-                # 0xF003F - SC_MANAGER_ALL_ACCESS
-                # http://msdn.microsoft.com/en-us/library/windows/desktop/ms685981(v=vs.85).aspx
-                ans = scmr.hROpenSCManagerW(dce, '{}\x00'.format(self.host), 'ServicesActive\x00', 0xF003F)
-                self.admin = True
-                return True
-            except scmr.DCERPCException as e:
+                dce.connect()
+            except:
                 pass
+            else:
+                dce.bind(scmr.MSRPC_UUID_SCMR)
+                try:
+                    # 0xF003F - SC_MANAGER_ALL_ACCESS
+                    # http://msdn.microsoft.com/en-us/library/windows/desktop/ms685981(v=vs.85).aspx
+                    ans = scmr.hROpenSCManagerW(dce, '{}\x00'.format(self.host), 'ServicesActive\x00', 0xF003F)
+                    self.admin = True
+                    return True
+                except scmr.DCERPCException as e:
+                    pass
+        except Exception as e:
+            print(e)
         return False
 
     ################################
@@ -360,7 +378,7 @@ class SmbCon(Connector):
                                   justUser=None, printUserStatus=False,
                                   perSecretCallback=lambda secretType, secret: add_ntds_hash(secret))
 
-                self.logger.info([self.host, self.ip, "NTDS", 'Extracting NTDS.dit, this could take a minute'])
+                self.logger.info([self.host, self.ip, "NTDS", 'Extracting NTDS.dit, this could take a few minutes...'])
                 NTDS.dump()
 
                 self.logger.success([self.host, self.ip, "NTDS", '{} hashes and {} passwords collected'.format(add_ntds_hash.ntds_hashes, add_ntds_hash.clear_text)])
@@ -390,15 +408,14 @@ class SmbCon(Connector):
         f.close()
 
     def uploadFile(self, local_file, location, share='C$'):
-        f = open(local_file)
+        f = open(local_file, 'rb')
         self.con.putFile(share, location, f.read)
         f.close()
 
-    def downloadFile(self, remote_file, location='ar3_download', share='C$'):
+    def downloadFile(self, remote_file, location='ar3_download', remote_share='C$'):
         f = open(location, 'wb')
-        self.con.getFile(share, remote_file, f.write)
+        self.con.getFile(remote_share, remote_file, f.write)
         f.close()
-        return
 
     def deleteFile(self, remote_file, share='C$'):
-        self.con.deleteFile(share, remote_file)
+        self.con.deleteFile(share, remote_file.replace('\\','/'))

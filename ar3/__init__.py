@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # Author: @m8r0wn
 
-# @TODO Cleanup debug messages & general output formatting
-# @TODO Add additional code execution methods
-# @TODO MOAR MODULES!
-
 import logging
 import argparse
 from sys import exit, argv
@@ -43,7 +39,7 @@ def main():
     main_parser = argparse.ArgumentParser(description=banner(), formatter_class=argparse.RawTextHelpFormatter, usage=argparse.SUPPRESS)
     main_parser._optionals.title = 'Optional Arguments\n\033[1;30m>>-------------------->\033[1;m'
     main_parser.add_argument('-D', '--debug', dest="debug", action='store_true', help='Show debug messages & failed login attempts')
-    main_parser.add_argument('-T', dest='max_threads', type=int, default=75, help='Max number of threads to use')
+    main_parser.add_argument('-T', dest='max_threads', type=int, default=55, help='Max number of threads to use')
     main_parser.add_argument('--host-max', dest='max_host_threads', type=int, default=20, help='Max threads per host')
     main_parser.add_argument('-W', dest='workspace', type=str, default='', required=False, help='Manually set workspace, otherwise defaults to config file')
     sub_parser = main_parser.add_subparsers(title=' \nOperational Modes\n\033[1;30m>>-------------------->\033[1;m', dest='mode')

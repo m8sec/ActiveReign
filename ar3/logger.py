@@ -134,6 +134,7 @@ def setup_logger(log_level=logging.INFO, logger_name='ar3'):
     StreamHandler = logging.StreamHandler(sys.stdout)
     StreamHandler.setFormatter(formatter)
     logger = logging.getLogger(logger_name)
+    logger.propagate = False
     logger.addHandler(StreamHandler)
     logger.setLevel(log_level)
     return AR3Adapter()
