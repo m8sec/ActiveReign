@@ -24,7 +24,6 @@ setup(
                     'pypykatz',
                     'requests',
                     'openpyxl',
-                    'paramiko',
                     'python-docx',
                     'terminaltables',
                     'ipparser>=0.3.5',

@@ -27,6 +27,7 @@ def shell_args(sub_parser):
     execution.add_argument('--ps_execute', dest='ps_execute', action='store_true',help=argparse.SUPPRESS)
     execution.add_argument('--fileless_sharename', dest='fileless_sharename', type=str, default='',help=argparse.SUPPRESS)
     execution.add_argument('--no-output', dest='no_output', action='store_true', help=argparse.SUPPRESS)
+    execution.add_argument('--slack', dest='slack', action='store_true',  help=argparse.SUPPRESS)
 
     shell_parser.add_argument(dest='target', nargs='+', help='System to generate simulated shell')
 
@@ -34,10 +35,6 @@ def shell_arg_mods(args, db_obj, loggers):
     if args.user and not args.passwd and not args.hash:
         # Get password if not provided
         args.passwd = getpass("Enter password, or continue with null-value: ")
-
-    if args.exec_method.lower() == 'ssh':
-        loggers['console'].warning("SSH Shells are not supported, try the native:\n\t\"ssh user@target_ip\"\n")
-        exit(0)
 
     if args.cred_id and not args.user:
         enum_user = db_obj.extract_user(args.cred_id)

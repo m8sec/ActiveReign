@@ -1,16 +1,12 @@
 import os
-
 from ar3.core.smb import SmbCon
-from ar3.core.winrm import WINRM
-from ar3.core.smbexec import SMBEXEC
-from ar3.core.wmiexec import WMIEXEC
-from ar3.core.atexec import TSCHEXEC
 from ar3.servers.smb import SMBServer
-from ar3.helpers.misc import gen_random_string
 from ar3.core.connector import Connector
+from ar3.helpers.misc import gen_random_string
+from ar3.ops.enum.host_enum import code_execution
 
 class AR3Shell(Connector):
-    def __init__(self, args, db_obj, loggers):
+    def __init__(self, args, db_obj, config_obj, loggers):
         Connector.__init__(self, args, loggers, args.target)
         self.output     = []
         self.pwd_list   = ['C:', 'Windows', 'System32']
@@ -19,6 +15,8 @@ class AR3Shell(Connector):
         self.exec_method  = args.exec_method
         self.sharename    = args.fileless_sharename
         self.db           = db_obj
+        self.config_obj   = config_obj
+
 
         try:
             # Setup Smb Connection
@@ -32,7 +30,7 @@ class AR3Shell(Connector):
             self.logger.warning("This is a limited shell and requires full paths for file interactions\n")
 
         except Exception as e:
-            self.logger.fail("Error Starting Shell:".format(str(e)))
+            self.logger.fail("Error Starting Shell: {}".format(str(e)))
             exit(1)
 
     def help(self):
@@ -119,20 +117,8 @@ class AR3Shell(Connector):
                 self.logger.fail("Deletion Failed: {}".format(str(e)))
 
     def cmd_execution(self, cmd):
-        self.filer.info("Command Execution\t{}\t{}\\{}\t{}".format(self.host, self.smbcon.ip, self.username, cmd))
-        if self.exec_method.lower() == 'wmiexec':
-            self.executioner = WMIEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
-
-        elif self.exec_method.lower() == 'smbexec':
-            self.executioner = SMBEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
-
-        elif self.exec_method.lower() == 'atexec':
-            self.executioner = TSCHEXEC(self.logger, self.host, self.args, self.smbcon, share_name=self.sharename)
-
-        elif self.exec_method.lower() == 'winrm':
-            self.executioner = WINRM(self.logger, self.host, self.args, self.smbcon)
-
-        self.output = self.executioner.execute(cmd).splitlines()
+        resp = code_execution(self.smbcon, self.args, self.host, self.loggers, self.config_obj, cmd, return_data=True)
+        self.output = resp.splitlines()
 
     def cmdloop(self):
         while True:
@@ -175,7 +161,7 @@ class AR3Shell(Connector):
                     self.logger.output(self.pwd)
 
                 else:
-                    self.cmd_execution(cmd)
+                    self.output = self.cmd_execution(cmd)
 
                 # Show cmd Output
                 for result in self.output:
@@ -202,7 +188,7 @@ def main(args, config_obj, db_obj, loggers):
             smb_srv_obj.start()
 
         # Enter CMD Loop
-        shell = AR3Shell(args, db_obj, loggers)
+        shell = AR3Shell(args, db_obj, config_obj, loggers)
         shell.cmdloop()
 
         # Close smbserver & exit

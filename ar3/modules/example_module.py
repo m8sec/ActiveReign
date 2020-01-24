@@ -5,7 +5,7 @@ class ExampleModule():
         self.author         = ['@m8r0wn']
         self.credit         = ['']
         self.requires_admin = False
-        self.exec_methods   = ['wmiexec', 'smbexec', 'atexec', 'winrm', 'ssh']
+        self.exec_methods   = ['wmiexec', 'smbexec', 'atexec', 'winrm']
         self.args = {
             'ARGUMENTS': {
                 'Description'   : 'Value to print',

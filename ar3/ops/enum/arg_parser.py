@@ -72,7 +72,7 @@ def enum_args(sub_parser):
     execution.add_argument('--force-ps32', dest='force_ps32', action='store_true',help='Run PowerShell command in a 32-bit process')
     execution.add_argument('--no-obfs', dest='no_obfs', action='store_true', help='Do not obfuscate PowerShell commands')
 
-    execution.add_argument('--exec-method', dest='exec_method', type=str, default='wmiexec',help='Code execution method {wmiexec, smbexec, winrm, ssh}')
+    execution.add_argument('--exec-method', dest='exec_method', choices=['wmiexec', 'smbexec','atexec', 'winrm'], default='wmiexec',help='Code execution method {wmiexec, smbexec, atexec, winrm}')
     execution.add_argument('--exec-ip', dest='exec_ip', type=str, default='127.0.0.1', help='Set server used for code execution output')
     execution.add_argument('--exec-share', dest='exec_share', type=str, default='C$',help='Set share used for code execution output')
     execution.add_argument('--exec-path', dest='exec_path', type=str, default='\\Windows\\Temp\\', help='Set path used for code execution output')

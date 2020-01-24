@@ -1,7 +1,5 @@
 from os import _exit
 from threading import Thread
-
-from ar3.core.ssh import SSH
 from ar3.core.wmi import WmiCon
 from ar3.core.rpc import RpcCon
 from ar3.core.smb import SmbCon
@@ -53,30 +51,6 @@ def smb_login(args, loggers, host, db, lockout_obj, config_obj):
     else:
         raise Exception('Connection to Server Failed')
 
-
-def ssh_login(args, loggers, host, db, lockout_obj, config_obj):
-    status  = ''
-    ssh     = SSH(args, loggers, host, db)
-    if ssh.ssh_connection():
-        try:
-            ssh.host_info()
-            ssh.login()
-            if ssh.admin:
-                status = "({})".format(highlight(config_obj.PWN3D_MSG, 'yellow'))
-            elif ssh.auth and args.user:
-                status = "({})".format(highlight('Success', 'green'))
-        except Exception as e:
-            e = str(e).lower()
-            if "authentication failed." in e and args.user:
-                status = "({})".format(highlight('Failed', 'red'))
-            elif "bad authentication type" in e and args.user:
-                status = "({})".format(highlight('Bad_Auth_Type', 'red'))
-        loggers['console'].info([ssh.host, ssh.ip, "ENUM", ssh.version, status])
-        return ssh
-    else:
-        raise Exception('Connection to Server Failed')
-
-
 def password_policy(con, args, db_obj, loggers):
     ppol = SAMRDump(con, args.debug, loggers['console'])
     ppol.dump(con.ip)
@@ -90,7 +64,6 @@ def password_policy(con, args, db_obj, loggers):
     else:
         raise Exception('Enumerating password policy failed')
 
-
 @requires_admin
 def code_execution(con, args, target, loggers, config_obj, payload, return_data=False):
     # Implement Execution Method
@@ -102,8 +75,7 @@ def code_execution(con, args, target, loggers, config_obj, payload, return_data=
         executioner = TSCHEXEC(loggers['console'], target, args, con, share_name=args.fileless_sharename)
     elif args.exec_method.lower() == 'winrm':
         executioner = WINRM(loggers['console'], target, args, con, share_name=False)
-    elif args.exec_method.lower() == 'ssh':
-        executioner = con
+
     # Log action to file
     loggers[args.mode].info("Code Execution\t{}\t{}\\{}\t{}".format(target, args.domain, args.user, payload))
 
@@ -223,21 +195,13 @@ def host_enum(target, args, lockout, config_obj, db_obj, loggers):
     # @TODO refactor
     try:
         try:
-            if args.exec_method == 'ssh':
-                con = ssh_login(args, loggers, target, db_obj, lockout, config_obj)
-            else:
-                con = smb_login(args, loggers, target, db_obj, lockout, config_obj)
+            con = smb_login(args, loggers, target, db_obj, lockout, config_obj)
         except Exception as e:
             loggers['console'].debug([target, target, "ENUM", highlight(str(e), 'red')])
             return []
 
         shares = []
-        if args.exec_method == 'ssh' and con.auth:
-            if args.execute:
-                con.admin = True # Override admin to allow execution
-                code_execution(con, args, target, loggers, config_obj, args.execute)
-            return []
-        elif con.auth:
+        if con.auth:
             # Sharefinder
             if args.share:
                 shares = args.share.split(",")
