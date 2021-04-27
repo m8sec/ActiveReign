@@ -52,8 +52,8 @@ $ activereign enum -u administrator -p Password123 --local-auth -M test_executio
 [*] Enum Authentication         \administrator (Password: P****) (Hash: False)
 [+] DC01                        192.168.1.1     ENUM             Windows Server 2008 R2 Standard 7601 Service Pack 1    (Domain: DEMO)   (Signing: True)  (SMBv1: True) (Adm!n) 
 [*] DC01                        192.168.1.1     TEST_EXECUTION   Testing execution methods                              
-[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: WMIEXEC    Fileless: SUCCESS   Remote (Defualt): SUCCESS
-[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: SMBEXEC    Fileless: SUCCESS   Remote (Defualt): SUCCESS
-[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: ATEXEC     Fileless: SUCCESS   Remote (Defualt): SUCCESS
-[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: WINRM      Fileless: N/A       Remote (Defualt): SUCCESS
+[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: WMIEXEC    Fileless: SUCCESS   Remote (Default): SUCCESS
+[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: SMBEXEC    Fileless: SUCCESS   Remote (Default): SUCCESS
+[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: ATEXEC     Fileless: SUCCESS   Remote (Default): SUCCESS
+[*] DC01                        192.168.1.1     TEST_EXECUTION   Execution Method: WINRM      Fileless: N/A       Remote (Default): SUCCESS
 ```
