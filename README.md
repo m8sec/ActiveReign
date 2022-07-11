@@ -7,8 +7,8 @@
   <img src="https://img.shields.io/badge/License-GPLv3-green.svg">&nbsp;
   <a href="https://www.youtube.com/channel/UC6-HLpd0rpPXmpJIhED8qTw">
     <img src="https://img.shields.io/badge/Demo-Youtube-red.svg"/></a>&nbsp;
-  <a href="https://twitter.com/intent/follow?screen_name=m8r0wn">
-     <img src="https://img.shields.io/twitter/follow/m8r0wn?style=social&logo=twitter" alt="follow on Twitter"></a>
+  <a href="https://twitter.com/intent/follow?screen_name=m8sec">
+     <img src="https://img.shields.io/twitter/follow/m8sec?style=social&logo=twitter" alt="follow on Twitter"></a>
 </p>
 
 ### Background
