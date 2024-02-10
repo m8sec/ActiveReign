@@ -1,0 +1,68 @@
+QUERIES = { 'users_active'        : '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))',
+          'users_all'             : '(&(objectCategory=person)(objectClass=user))',
+          'users_admin'           : '(&(objectCategory=person)(objectClass=user)(admincount=1))',
+          'users_email_search'    : '(&(objectClass=user)(mail={}))',
+          'users_account_search'  : '(&(objectClass=user)(sAMAccountName={}))',
+          'cpu_all'               : '(&(objectClass=Computer))',
+          'cpu_search'            : '(&(objectClass=Computer)(dNSHostName={}*))',
+          'groups_all'            : '(&(objectCategory=group))',
+          'group_members'         : '(&(objectCategory=group)(sAMAccountName={}))',
+          'domain_policy'         : '(objectClass=domain)',
+          'domain_trust'          : '(objectClass=trustedDomain)',
+          'reversible_encryption' : '(&(objectClass=user)(objectCategory=user)(userAccountControl:1.2.840.113556.1.4.803:=128))',
+          'pass_never_expire'     : '(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=65536))',
+          'pass_not_required'     : '(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=32))'
+          }
+
+ATTRIBUTES = { 'users' : [ 'Name', 'userPrincipalName', 'sAMAccountName', 'mail', 'company', 'department', 'mobile',
+                           'telephoneNumber', 'badPwdCount', 'userWorkstations', 'manager', 'memberOf', 'manager',
+                           'whenCreated', 'whenChanged', 'Comment', 'Info', 'Description','userAccountControl'],
+
+            'cpu'   : ['dNSHostName', 'operatingSystem', 'operatingSystemVersion', 'operatingSystemServicePack', 'Description'],
+
+            'groups': ['distinguishedName', 'cn', 'name', 'sAMAccountName', 'sAMAccountType', 'whenCreated', 'whenChanged', 'Description'],
+
+            'domain': [ 'cn', 'dc', 'distinguishedName', 'lockOutObservationWindow', 'lockoutDuration',
+                      'lockoutThreshold', 'maxPwdAge', 'minPwdAge', 'minPwdLength', 'pwdProperties',
+                      'pwdHistoryLength', 'nextRid', 'dn',],
+
+            'trust' : ['cn', 'flatName', 'name', 'objectClass', 'trustAttributes', 'trustDirection', 'trustPartner',
+                     'trustType'],
+            }
+
+UAC_LOOKUP = {
+    '1'           : 'SCRIPT',
+    '2'           : 'ACCOUNTDISABLE',
+    '8'           : 'HOMEDIR_REQUIRED',
+    '16'          : 'LOCKOUT',
+    '32'          : 'PASSWD_NOTREQD',
+    '64'          : 'PASSWD_CANT_CHANGE',
+    '128'         : 'ENCRYPTED_TEXT_PWD_ALLOWED',
+    '256'         : 'TEMP_DUPLICATE_ACCOUNT',
+    '512'         : 'NORMAL_ACCOUNT',
+    '514'         : 'Disabled Account',
+    '544'         : 'Enabled, Password Not Required',
+    '546'        : 'Disabled, Password Not Required',
+    '2048'        : 'INTERDOMAIN_TRUST_ACCOUNT',
+    '4096'        : 'WORKSTATION_TRUST_ACCOUNT',
+    '8192'        : 'SERVER_TRUST_ACCOUNT',
+    '65536'       : 'DONT_EXPIRE_PASSWORD',
+    '66048'       : 'Enabled, Password Doesnt Expire',
+    '66050'       : 'Disabled, Password Doesnt Expire',
+    '66082'       : 'Disabled, Password Doesnt Expire, & Not Required',
+    '131072'      : 'MNS_LOGON_ACCOUNT',
+    '262144'      : 'SMARTCARD_REQUIRED',
+    '262656'      : 'Enabled, Smartcard Required',
+    '262658'      : 'Disabled, Smartcard Required',
+    '262690'      : 'Disabled, Smartcard Required, Password Not Required',
+    '328194'      : 'Disabled, Smartcard Required, Password Doesnt Expire',
+    '328226'      : 'Disabled, Smartcard Required, Password  Doesnt Expire, & Not Required',
+    '524288'      : 'TRUSTED_FOR_DELEGATION',
+    '532480'      : 'Domaincontroller',
+    '1048576'     : 'NOT_DELEGATED',
+    '2097152'     : 'USE_DES_KEY_ONLY',
+    '4194304'     : 'DONT_REQ_PREAUTH',
+    '8388608'     : 'PASSWORD_EXPIRED',
+    '16777216'    : 'TRUSTED_TO_AUTH_FOR_DELEGATION',
+    '67108864'    : 'PARTIAL_SECRETS_ACCOUNT'
+    }

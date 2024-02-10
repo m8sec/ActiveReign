@@ -1,0 +1,3 @@
+[submodule "ar3/thirdparty/impacket"]
+	path = ar3/thirdparty/impacket
+	url = https://github.com/SecureAuthCorp/impacket
